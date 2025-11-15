@@ -12,9 +12,46 @@ serve(async (req) => {
   }
 
   try {
+    // Authenticate the user
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
+    
+    // Verify user and check admin role
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+
+    if (authError || !user) {
+      console.error('Auth error:', authError);
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Check if user is admin
+    const { data: roleData, error: roleError } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .eq('role', 'admin')
+      .single();
+
+    if (roleError || !roleData) {
+      console.error('Role check error:', roleError);
+      return new Response(JSON.stringify({ error: 'Forbidden - Admin access required' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
     
     const url = new URL(req.url);
     const action = url.searchParams.get('action');
@@ -37,6 +74,36 @@ serve(async (req) => {
     if (action === 'add-affiliate-link' && req.method === 'POST') {
       const { name, url, description } = await req.json();
       
+      // Server-side input validation
+      if (!name || typeof name !== 'string' || name.trim().length === 0 || name.length > 100) {
+        return new Response(JSON.stringify({ error: 'Invalid name: must be 1-100 characters' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      
+      if (!url || typeof url !== 'string' || url.trim().length === 0 || url.length > 500) {
+        return new Response(JSON.stringify({ error: 'Invalid URL: must be 1-500 characters' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      
+      // Validate URL format
+      if (!/^https?:\/\/.+/.test(url)) {
+        return new Response(JSON.stringify({ error: 'Invalid URL: must start with http:// or https://' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      
+      if (description && (typeof description !== 'string' || description.length > 500)) {
+        return new Response(JSON.stringify({ error: 'Invalid description: must be max 500 characters' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      
       const { data, error } = await supabase
         .from('affiliate_links')
         .insert({ name, url, description })
@@ -53,6 +120,46 @@ serve(async (req) => {
     // Update affiliate link
     if (action === 'update-affiliate-link' && req.method === 'PUT') {
       const { id, name, url, description, active } = await req.json();
+      
+      // Validate ID
+      if (!id || typeof id !== 'string') {
+        return new Response(JSON.stringify({ error: 'Invalid ID' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      
+      // Validate name
+      if (name !== undefined && (typeof name !== 'string' || name.trim().length === 0 || name.length > 100)) {
+        return new Response(JSON.stringify({ error: 'Invalid name: must be 1-100 characters' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      
+      // Validate URL
+      if (url !== undefined) {
+        if (typeof url !== 'string' || url.trim().length === 0 || url.length > 500) {
+          return new Response(JSON.stringify({ error: 'Invalid URL: must be 1-500 characters' }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+        if (!/^https?:\/\/.+/.test(url)) {
+          return new Response(JSON.stringify({ error: 'Invalid URL: must start with http:// or https://' }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+      }
+      
+      // Validate description
+      if (description !== undefined && (typeof description !== 'string' || description.length > 500)) {
+        return new Response(JSON.stringify({ error: 'Invalid description: must be max 500 characters' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
       
       const { data, error } = await supabase
         .from('affiliate_links')
