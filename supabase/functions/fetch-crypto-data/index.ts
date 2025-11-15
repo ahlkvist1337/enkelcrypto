@@ -12,7 +12,33 @@ serve(async (req) => {
   }
 
   try {
-    console.log('Fetching crypto data from CoinGecko...');
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
+    // Check cache (5 minutes)
+    const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
+    const { data: cached } = await supabase
+      .from('site_settings')
+      .select('value, updated_at')
+      .eq('key', 'crypto_data_cache')
+      .single();
+
+    if (cached) {
+      const cacheAge = Date.now() - new Date(cached.updated_at).getTime();
+      if (cacheAge < CACHE_DURATION) {
+        console.log('Returning cached crypto data');
+        return new Response(cached.value, {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
+    console.log('Fetching fresh crypto data from CoinGecko...');
+    
+    // Add delay to avoid rate limiting
+    await new Promise(resolve => setTimeout(resolve, 1000));
     
     // Fetch market data from CoinGecko (free API, no key needed)
     const marketResponse = await fetch(
@@ -20,10 +46,20 @@ serve(async (req) => {
     );
     
     if (!marketResponse.ok) {
+      // If rate limited and we have old cache, return it
+      if (marketResponse.status === 429 && cached) {
+        console.log('Rate limited, returning old cache');
+        return new Response(cached.value, {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
       throw new Error(`CoinGecko API error: ${marketResponse.status}`);
     }
     
     const marketData = await marketResponse.json();
+    
+    // Add delay between API calls
+    await new Promise(resolve => setTimeout(resolve, 1000));
     
     // Fetch global market data
     const globalResponse = await fetch('https://api.coingecko.com/api/v3/global');
@@ -88,7 +124,18 @@ serve(async (req) => {
     
     console.log('Successfully fetched crypto data');
     
-    return new Response(JSON.stringify(result), {
+    const resultJson = JSON.stringify(result);
+    
+    // Save to cache
+    await supabase
+      .from('site_settings')
+      .upsert({
+        key: 'crypto_data_cache',
+        value: resultJson,
+        updated_at: new Date().toISOString(),
+      });
+    
+    return new Response(resultJson, {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
