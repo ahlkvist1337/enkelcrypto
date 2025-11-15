@@ -96,27 +96,22 @@ VIKTIG TON OCH STIL:
 - Saklig, neutral och förklarande ton
 - Enkla ord, inga komplicerade termer
 - Längre än dagliga rapporter - ca 600-800 ord
+- Skriv löpande text i stycken, undvik punktlistor och numrerade listor
+- Använd ALDRIG asterisker (*), hashtags (#) eller andra markdown-formatteringar
+- Skriv naturligt flytande text som en artikel
 
-STRUKTUR:
-1. Sammanfattning av veckan som gått
-2. Analys av huvudsakliga trender (BTC, ETH, altcoins)
-3. Förklaring av vad som drivit marknaden under veckan
-4. **POTENTIELLA VINNARE:**
-   - 3 kortsiktiga picks (1-2 veckor):
-     * Baserat på momentum, trading volume, tekniska indikatorer
-     * För varje: Namn, symbol, kort motivering (2-3 meningar)
-     * Fokus på coins med tydlig prisrörelse eller tekniska breakouts
-   - 2 långsiktiga picks (3-6 månader):
-     * Baserat på fundamenta, adoption, ekosystemutveckling
-     * För varje: Namn, symbol, djupare motivering (3-4 meningar)
-     * Fokus på projekt med stark utveckling eller kommande milestolpar
-   - Formatera tydligt med rubriker och punktlista
-5. Vad ska man hålla koll på kommande vecka
-6. Avsluta med: "Detta är en analys av nuläget. Kom ihåg att kryptomarknaden är extremt volatil och detta är inte finansiell rådgivning. Gör alltid din egen research."
+STRUKTUR (men skriv det som naturlig text, inte som listor):
+Börja med en sammanfattning av veckan som gått. Analysera sedan huvudsakliga trender för Bitcoin, Ethereum och altcoins. Förklara vad som drivit marknaden under veckan.
+
+Gå sedan in på potentiella vinnare. För kortsiktigt (1-2 veckor) - nämn 3 coins som är intressanta baserat på momentum och tekniska faktorer. För långsiktigt (3-6 månader) - nämn 2 projekt som är värda att följa baserat på fundamenta och utveckling. Integrera dessa naturligt i texten, beskriv varför de är intressanta utan att använda punktlistor.
+
+Avsluta med vad som är värt att hålla koll på kommande vecka, och slutligen: "Detta är en analys av nuläget. Kom ihåg att kryptomarknaden är extremt volatil och detta är inte finansiell rådgivning. Gör alltid din egen research."
 
 VIKTIGT: 
 - Använd ALDRIG ord som "investera", "köp", "sälj", "rekommenderar"
 - Använd istället: "intressant att följa", "värd att hålla koll på", "spännande utveckling"
+- Skriv som en tidningsartikel med flytande stycken, inte som en lista
+- UNDVIK alla former av formattering som *, #, eller numrerade punkter
 - Var specifik med varför en coin är intressant (tekniska faktorer, fundamenta, nyheter)`
           },
           {
