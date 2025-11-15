@@ -1,6 +1,6 @@
 import { NavLink } from "@/components/NavLink";
 import { Button } from "@/components/ui/button";
-import { Menu } from "lucide-react";
+import { Menu, Settings } from "lucide-react";
 import { useState } from "react";
 
 export const Header = () => {
@@ -46,6 +46,14 @@ export const Header = () => {
               activeClassName="text-primary"
             >
               Om
+            </NavLink>
+            <NavLink
+              to="/admin"
+              className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary flex items-center gap-1"
+              activeClassName="text-primary"
+            >
+              <Settings className="h-4 w-4" />
+              Admin
             </NavLink>
           </nav>
 
@@ -94,6 +102,15 @@ export const Header = () => {
               onClick={() => setMobileMenuOpen(false)}
             >
               Om
+            </NavLink>
+            <NavLink
+              to="/admin"
+              className="block py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-primary flex items-center gap-1"
+              activeClassName="text-primary"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              <Settings className="h-4 w-4" />
+              Admin
             </NavLink>
           </nav>
         )}

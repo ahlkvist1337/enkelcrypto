@@ -5,8 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Plus, Trash2, RefreshCw } from "lucide-react";
+import { Header } from "@/components/Header";
+import { Footer } from "@/components/Footer";
 
 interface AffiliateLink {
   id: string;
@@ -154,19 +155,25 @@ export default function Admin() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="min-h-screen bg-background flex flex-col">
+        <Header />
+        <div className="flex-grow flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+        <Footer />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background py-12 px-4">
-      <div className="max-w-4xl mx-auto space-y-8">
-        <div>
-          <h1 className="text-4xl font-bold text-foreground mb-2">Admin Panel</h1>
-          <p className="text-muted-foreground">Hantera affiliatelänkar och inställningar</p>
-        </div>
+    <div className="min-h-screen bg-background flex flex-col">
+      <Header />
+      <main className="flex-grow py-12 px-4">
+        <div className="max-w-4xl mx-auto space-y-8">
+          <div>
+            <h1 className="text-4xl font-bold text-foreground mb-2">Admin Panel</h1>
+            <p className="text-muted-foreground">Hantera affiliatelänkar och inställningar</p>
+          </div>
 
         <Card className="p-6">
           <h2 className="text-2xl font-bold text-foreground mb-4">Generera Rapport</h2>
@@ -253,6 +260,8 @@ export default function Admin() {
           </div>
         </Card>
       </div>
-    </div>
+    </main>
+    <Footer />
+  </div>
   );
 }
