@@ -8,7 +8,9 @@ import About from "./pages/About";
 import Archive from "./pages/Archive";
 import WeeklyReports from "./pages/WeeklyReports";
 import Admin from "./pages/Admin";
+import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
+import { ProtectedRoute } from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
@@ -23,7 +25,15 @@ const App = () => (
           <Route path="/om" element={<About />} />
           <Route path="/arkiv" element={<Archive />} />
           <Route path="/veckorapporter" element={<WeeklyReports />} />
-          <Route path="/admin" element={<Admin />} />
+          <Route path="/auth" element={<Auth />} />
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute requireAdmin>
+                <Admin />
+              </ProtectedRoute>
+            }
+          />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

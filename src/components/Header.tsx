@@ -1,10 +1,19 @@
 import { NavLink } from "@/components/NavLink";
 import { Button } from "@/components/ui/button";
-import { Menu, Settings } from "lucide-react";
+import { Menu, Settings, LogOut, User } from "lucide-react";
 import { useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
 
 export const Header = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { user, isAdmin, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/");
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -47,14 +56,37 @@ export const Header = () => {
             >
               Om
             </NavLink>
-            <NavLink
-              to="/admin"
-              className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary flex items-center gap-1"
-              activeClassName="text-primary"
-            >
-              <Settings className="h-4 w-4" />
-              Admin
-            </NavLink>
+            {isAdmin && (
+              <NavLink
+                to="/admin"
+                className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary flex items-center gap-1"
+                activeClassName="text-primary"
+              >
+                <Settings className="h-4 w-4" />
+                Admin
+              </NavLink>
+            )}
+            {user ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleSignOut}
+                className="flex items-center gap-2"
+              >
+                <LogOut className="h-4 w-4" />
+                Logga ut
+              </Button>
+            ) : (
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() => navigate("/auth")}
+                className="flex items-center gap-2"
+              >
+                <User className="h-4 w-4" />
+                Logga in
+              </Button>
+            )}
           </nav>
 
           {/* Mobile Menu Button */}
@@ -103,15 +135,40 @@ export const Header = () => {
             >
               Om
             </NavLink>
-            <NavLink
-              to="/admin"
-              className="block py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-primary flex items-center gap-1"
-              activeClassName="text-primary"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              <Settings className="h-4 w-4" />
-              Admin
-            </NavLink>
+            {isAdmin && (
+              <NavLink
+                to="/admin"
+                className="block py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-primary flex items-center gap-1"
+                activeClassName="text-primary"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <Settings className="h-4 w-4" />
+                Admin
+              </NavLink>
+            )}
+            {user ? (
+              <button
+                onClick={() => {
+                  handleSignOut();
+                  setMobileMenuOpen(false);
+                }}
+                className="block w-full text-left py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-primary flex items-center gap-1"
+              >
+                <LogOut className="h-4 w-4" />
+                Logga ut
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  navigate("/auth");
+                  setMobileMenuOpen(false);
+                }}
+                className="block w-full text-left py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-primary flex items-center gap-1"
+              >
+                <User className="h-4 w-4" />
+                Logga in
+              </button>
+            )}
           </nav>
         )}
       </div>

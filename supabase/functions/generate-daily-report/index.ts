@@ -49,6 +49,17 @@ ${cryptoData.losers.map((l: any, i: number) => `${i+1}. ${l.name} (${l.symbol}):
 
     console.log('Generating AI report...');
     
+    // Fetch affiliate links to include in report
+    const { data: affiliateLinks } = await supabase
+      .from('affiliate_links')
+      .select('name, url')
+      .eq('active', true)
+      .limit(3);
+    
+    const affiliateText = affiliateLinks && affiliateLinks.length > 0
+      ? `\n\nTillgängliga handelsplattformar:\n${affiliateLinks.map(link => `- ${link.name}: ${link.url}`).join('\n')}`
+      : '';
+    
     // Generate report with AI
     const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -81,7 +92,7 @@ Använd aldrig ord som "investera", "köp", "sälj" eller liknande råd.`
           },
           {
             role: 'user',
-            content: `Skriv dagens kryptorapport baserat på denna data:\n\n${dataSummary}`
+            content: `Skriv dagens kryptorapport baserat på denna data:\n\n${dataSummary}${affiliateText}`
           }
         ],
       }),

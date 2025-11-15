@@ -4,6 +4,7 @@ import { DailyReport } from "@/components/DailyReport";
 import { MarketOverview } from "@/components/MarketOverview";
 import { WinnersLosers } from "@/components/WinnersLosers";
 import { NewsSection } from "@/components/NewsSection";
+import { AffiliateLinks } from "@/components/AffiliateLinks";
 import { Loader2 } from "lucide-react";
 import { useTodaysReport, useMarketMovers, useCryptoMarketData } from "@/hooks/useCryptoData";
 
@@ -28,6 +29,7 @@ const Index = () => {
           <DailyReport report={report} />
           <MarketOverview marketData={marketData} />
           <WinnersLosers movers={movers} />
+          <AffiliateLinks />
           <NewsSection />
         </div>
       </main>
