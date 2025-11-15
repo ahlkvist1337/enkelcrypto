@@ -63,7 +63,17 @@ serve(async (req) => {
     
     // Fetch global market data
     const globalResponse = await fetch('https://api.coingecko.com/api/v3/global');
-    const globalData = await globalResponse.json();
+    
+    let globalData = null;
+    if (globalResponse.ok) {
+      try {
+        globalData = await globalResponse.json();
+      } catch (e) {
+        console.error('Failed to parse global data:', e);
+      }
+    } else {
+      console.warn('Global API failed with status:', globalResponse.status);
+    }
     
     // Extract top gainers and losers
     const sorted = [...marketData].sort((a: any, b: any) => 
@@ -84,10 +94,17 @@ serve(async (req) => {
     const btc = marketData.find((coin: any) => coin.id === 'bitcoin');
     const eth = marketData.find((coin: any) => coin.id === 'ethereum');
     
+    // Calculate fallback market cap from available data if global API failed
+    const marketCap = globalData?.data?.total_market_cap?.sek || 
+      marketData.reduce((sum: number, coin: any) => sum + (coin.market_cap || 0), 0);
+    
+    const btcDominance = globalData?.data?.market_cap_percentage?.btc || 
+      (btc?.market_cap ? (btc.market_cap / marketCap) * 100 : 45);
+    
     const result = {
       timestamp: new Date().toISOString(),
-      marketCap: globalData.data.total_market_cap.sek,
-      btcDominance: globalData.data.market_cap_percentage.btc,
+      marketCap: marketCap,
+      btcDominance: btcDominance,
       bitcoin: {
         price: btc?.current_price || 0,
         change24h: btc?.price_change_percentage_24h || 0,
