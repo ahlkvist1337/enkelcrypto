@@ -21,6 +21,7 @@ export default function Admin() {
   const [affiliateLinks, setAffiliateLinks] = useState<AffiliateLink[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
+  const [generatingWeekly, setGeneratingWeekly] = useState(false);
   const [newLink, setNewLink] = useState({ name: "", url: "", description: "" });
   const { toast } = useToast();
 
@@ -153,6 +154,34 @@ export default function Admin() {
     }
   };
 
+  const generateWeeklyReport = async () => {
+    setGeneratingWeekly(true);
+    try {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-weekly-report`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) throw new Error('Failed to generate weekly report');
+      
+      toast({
+        title: "Genererad!",
+        description: "Veckans rapport har genererats",
+      });
+    } catch (error) {
+      toast({
+        title: "Fel",
+        description: "Kunde inte generera veckorapport",
+        variant: "destructive",
+      });
+    } finally {
+      setGeneratingWeekly(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex flex-col">
@@ -176,23 +205,38 @@ export default function Admin() {
           </div>
 
         <Card className="p-6">
-          <h2 className="text-2xl font-bold text-foreground mb-4">Generera Rapport</h2>
-          <p className="text-muted-foreground mb-4">
-            Generera dagens rapport manuellt (körs automatiskt varje dag)
+          <h2 className="text-2xl font-bold text-foreground mb-4">Generera Rapporter</h2>
+          <p className="text-muted-foreground mb-6">
+            Rapporter genereras automatiskt: Dagligen kl 18:00 och veckovis på söndagar kl 18:00. Du kan också generera dem manuellt här.
           </p>
-          <Button onClick={generateReport} disabled={generating}>
-            {generating ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Genererar...
-              </>
-            ) : (
-              <>
-                <RefreshCw className="mr-2 h-4 w-4" />
-                Generera Rapport Nu
-              </>
-            )}
-          </Button>
+          <div className="flex gap-4">
+            <Button onClick={generateReport} disabled={generating}>
+              {generating ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Genererar...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Generera Daglig Rapport
+                </>
+              )}
+            </Button>
+            <Button onClick={generateWeeklyReport} disabled={generatingWeekly} variant="secondary">
+              {generatingWeekly ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Genererar...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Generera Veckorapport
+                </>
+              )}
+            </Button>
+          </div>
         </Card>
 
         <Card className="p-6">

@@ -80,15 +80,20 @@ VIKTIG TON OCH STIL:
 - INTE upphetsad eller hype-drivande
 - Saklig, neutral och förklarande ton
 - Enkla ord, inga komplicerade termer
-- Kort och koncist - max 300-400 ord
+- Kort och koncist - max 400-500 ord
 
 STRUKTUR:
 1. Kort sammanfattning av dagens övergripande marknadsläge
 2. Förklaring av huvudsakliga rörelser (BTC, ETH)
 3. Kort om vad som driver marknaden
-4. Avsluta alltid med: "Detta är läget just nu. Kom ihåg att kryptomarknaden är volatil och detta är inte finansiell rådgivning."
+4. **NYA SEKTION - Potentiella vinnare:**
+   - Välj 3 kortsiktiga picks (närmaste 1-2 veckorna) baserat på momentum och tekniska faktorer
+   - Välj 2 långsiktiga picks (3-6 månader) baserat på fundamenta och adoption
+   - För varje pick: Ange namn, kort motivering (1-2 meningar)
+   - Formatera som: "Kortsiktigt: [coin] - [motivering]" och "Långsiktigt: [coin] - [motivering]"
+5. Avsluta alltid med: "Detta är läget just nu. Kom ihåg att kryptomarknaden är volatil och detta är inte finansiell rådgivning."
 
-Använd aldrig ord som "investera", "köp", "sälj" eller liknande råd.`
+VIKTIGT: Använd aldrig ord som "investera", "köp", "sälj" - använd istället "intressant", "spännande", "hålla koll på".`
           },
           {
             role: 'user',
