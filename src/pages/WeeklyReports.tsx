@@ -45,11 +45,13 @@ const WeeklyReports = () => {
                             })}
                           </span>
                         </div>
-                        <h2 className="text-xl font-semibold text-foreground">
+                        <h2 className="text-2xl md:text-3xl font-bold text-foreground">
                           {report.title}
                         </h2>
-                        <div className="text-muted-foreground leading-relaxed whitespace-pre-wrap">
-                          {report.content}
+                        <div className="prose prose-slate max-w-none">
+                          <div className="text-foreground/90 leading-relaxed whitespace-pre-wrap">
+                            {report.content}
+                          </div>
                         </div>
                       </div>
                     </Card>
