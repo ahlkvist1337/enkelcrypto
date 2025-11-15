@@ -1,0 +1,101 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.81.1";
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    console.log('Fetching crypto data from CoinGecko...');
+    
+    // Fetch market data from CoinGecko (free API, no key needed)
+    const marketResponse = await fetch(
+      'https://api.coingecko.com/api/v3/coins/markets?vs_currency=sek&order=market_cap_desc&per_page=100&page=1&sparkline=false&price_change_percentage=24h,7d'
+    );
+    
+    if (!marketResponse.ok) {
+      throw new Error(`CoinGecko API error: ${marketResponse.status}`);
+    }
+    
+    const marketData = await marketResponse.json();
+    
+    // Fetch global market data
+    const globalResponse = await fetch('https://api.coingecko.com/api/v3/global');
+    const globalData = await globalResponse.json();
+    
+    // Extract top gainers and losers
+    const sorted = [...marketData].sort((a: any, b: any) => 
+      Math.abs(b.price_change_percentage_24h || 0) - Math.abs(a.price_change_percentage_24h || 0)
+    );
+    
+    const gainers = marketData
+      .filter((coin: any) => (coin.price_change_percentage_24h || 0) > 0)
+      .sort((a: any, b: any) => (b.price_change_percentage_24h || 0) - (a.price_change_percentage_24h || 0))
+      .slice(0, 5);
+    
+    const losers = marketData
+      .filter((coin: any) => (coin.price_change_percentage_24h || 0) < 0)
+      .sort((a: any, b: any) => (a.price_change_percentage_24h || 0) - (b.price_change_percentage_24h || 0))
+      .slice(0, 5);
+    
+    // Get Bitcoin and Ethereum data
+    const btc = marketData.find((coin: any) => coin.id === 'bitcoin');
+    const eth = marketData.find((coin: any) => coin.id === 'ethereum');
+    
+    const result = {
+      timestamp: new Date().toISOString(),
+      marketCap: globalData.data.total_market_cap.sek,
+      btcDominance: globalData.data.market_cap_percentage.btc,
+      bitcoin: {
+        price: btc?.current_price || 0,
+        change24h: btc?.price_change_percentage_24h || 0,
+        change7d: btc?.price_change_percentage_7d_in_currency || 0,
+      },
+      ethereum: {
+        price: eth?.current_price || 0,
+        change24h: eth?.price_change_percentage_24h || 0,
+        change7d: eth?.price_change_percentage_7d_in_currency || 0,
+      },
+      gainers: gainers.map((coin: any) => ({
+        name: coin.name,
+        symbol: coin.symbol.toUpperCase(),
+        priceChange: coin.price_change_percentage_24h || 0,
+        price: coin.current_price,
+      })),
+      losers: losers.map((coin: any) => ({
+        name: coin.name,
+        symbol: coin.symbol.toUpperCase(),
+        priceChange: coin.price_change_percentage_24h || 0,
+        price: coin.current_price,
+      })),
+      allCoins: marketData.map((coin: any) => ({
+        id: coin.id,
+        name: coin.name,
+        symbol: coin.symbol.toUpperCase(),
+        price: coin.current_price,
+        change24h: coin.price_change_percentage_24h || 0,
+        change7d: coin.price_change_percentage_7d_in_currency || 0,
+        marketCap: coin.market_cap,
+        volume: coin.total_volume,
+      })),
+    };
+    
+    console.log('Successfully fetched crypto data');
+    
+    return new Response(JSON.stringify(result), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  } catch (error) {
+    console.error('Error fetching crypto data:', error);
+    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+});

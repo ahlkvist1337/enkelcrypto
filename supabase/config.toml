@@ -1,0 +1,10 @@
+project_id = "cyjacdvuszdlysjdkeis"
+
+[functions.fetch-crypto-data]
+verify_jwt = false
+
+[functions.generate-daily-report]
+verify_jwt = false
+
+[functions.admin-api]
+verify_jwt = false
