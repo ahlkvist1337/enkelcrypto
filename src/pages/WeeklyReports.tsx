@@ -2,33 +2,12 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-
-interface WeeklyReport {
-  id: number;
-  weekStart: string;
-  weekEnd: string;
-  title: string;
-  excerpt: string;
-}
-
-const mockWeeklyReports: WeeklyReport[] = [
-  {
-    id: 1,
-    weekStart: new Date(Date.now() - 6 * 86400000).toLocaleDateString("sv-SE", { day: "numeric", month: "long" }),
-    weekEnd: new Date().toLocaleDateString("sv-SE", { day: "numeric", month: "long", year: "numeric" }),
-    title: "Veckans Kryptorapport",
-    excerpt: "En vecka präglad av stark tillväxt för Bitcoin och ökad institutionell aktivitet. Altcoins visar blandad utveckling...",
-  },
-  {
-    id: 2,
-    weekStart: new Date(Date.now() - 13 * 86400000).toLocaleDateString("sv-SE", { day: "numeric", month: "long" }),
-    weekEnd: new Date(Date.now() - 7 * 86400000).toLocaleDateString("sv-SE", { day: "numeric", month: "long", year: "numeric" }),
-    title: "Veckans Kryptorapport",
-    excerpt: "Konsolideringsvecka där marknaden andas efter tidigare uppgång. Fokus på regulatoriska nyheter från USA och EU...",
-  },
-];
+import { Loader2 } from "lucide-react";
+import { useReports } from "@/hooks/useCryptoData";
 
 const WeeklyReports = () => {
+  const { data: reports, isLoading } = useReports('weekly');
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Header />
@@ -44,31 +23,44 @@ const WeeklyReports = () => {
               </p>
             </div>
 
-            <div className="space-y-4">
-              {mockWeeklyReports.map((report) => (
-                <Card key={report.id} className="p-6 hover:shadow-lg transition-shadow cursor-pointer">
-                  <div className="space-y-3">
-                    <div className="flex items-center space-x-2">
-                      <Badge variant="outline" className="bg-accent/10 text-accent border-accent/20">
-                        Veckorapport
-                      </Badge>
-                      <span className="text-sm text-muted-foreground">
-                        {report.weekStart} - {report.weekEnd}
-                      </span>
-                    </div>
-                    <h2 className="text-xl font-semibold text-foreground">
-                      {report.title}
-                    </h2>
-                    <p className="text-muted-foreground leading-relaxed">
-                      {report.excerpt}
-                    </p>
-                    <p className="text-sm text-primary font-medium">
-                      Läs mer →
-                    </p>
-                  </div>
-                </Card>
-              ))}
-            </div>
+            {isLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {reports && reports.length > 0 ? (
+                  reports.map((report) => (
+                    <Card key={report.id} className="p-6 hover:shadow-lg transition-shadow">
+                      <div className="space-y-3">
+                        <div className="flex items-center space-x-2">
+                          <Badge variant="outline" className="bg-accent/10 text-accent border-accent/20">
+                            Veckorapport
+                          </Badge>
+                          <span className="text-sm text-muted-foreground">
+                            {new Date(report.date).toLocaleDateString("sv-SE", {
+                              year: "numeric",
+                              month: "long",
+                              day: "numeric",
+                            })}
+                          </span>
+                        </div>
+                        <h2 className="text-xl font-semibold text-foreground">
+                          {report.title}
+                        </h2>
+                        <div className="text-muted-foreground leading-relaxed whitespace-pre-wrap">
+                          {report.content}
+                        </div>
+                      </div>
+                    </Card>
+                  ))
+                ) : (
+                  <p className="text-muted-foreground text-center py-12">
+                    Inga veckorapporter tillgängliga ännu.
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </main>
