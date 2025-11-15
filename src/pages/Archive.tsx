@@ -2,36 +2,12 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-
-interface Report {
-  id: number;
-  date: string;
-  title: string;
-  excerpt: string;
-}
-
-const mockReports: Report[] = [
-  {
-    id: 1,
-    date: new Date().toLocaleDateString("sv-SE", { year: "numeric", month: "long", day: "numeric" }),
-    title: "Dagens Kryptorapport",
-    excerpt: "Marknaden visar blandade signaler idag med Bitcoin som håller sig stabilt...",
-  },
-  {
-    id: 2,
-    date: new Date(Date.now() - 86400000).toLocaleDateString("sv-SE", { year: "numeric", month: "long", day: "numeric" }),
-    title: "Dagens Kryptorapport",
-    excerpt: "Stark uppgång för Bitcoin medan altcoins konsoliderar efter senaste veckans rally...",
-  },
-  {
-    id: 3,
-    date: new Date(Date.now() - 172800000).toLocaleDateString("sv-SE", { year: "numeric", month: "long", day: "numeric" }),
-    title: "Dagens Kryptorapport",
-    excerpt: "Makroekonomiska signaler påverkar marknaden positivt, särskilt större kryptovalutor...",
-  },
-];
+import { Loader2 } from "lucide-react";
+import { useReports } from "@/hooks/useCryptoData";
 
 const Archive = () => {
+  const { data: reports, isLoading } = useReports('daily');
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Header />
@@ -47,29 +23,44 @@ const Archive = () => {
               </p>
             </div>
 
-            <div className="space-y-4">
-              {mockReports.map((report) => (
-                <Card key={report.id} className="p-6 hover:shadow-lg transition-shadow cursor-pointer">
-                  <div className="space-y-3">
-                    <div className="flex items-center space-x-2">
-                      <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
-                        Daglig rapport
-                      </Badge>
-                      <span className="text-sm text-muted-foreground">{report.date}</span>
-                    </div>
-                    <h2 className="text-xl font-semibold text-foreground">
-                      {report.title}
-                    </h2>
-                    <p className="text-muted-foreground leading-relaxed">
-                      {report.excerpt}
-                    </p>
-                    <p className="text-sm text-primary font-medium">
-                      Läs mer →
-                    </p>
-                  </div>
-                </Card>
-              ))}
-            </div>
+            {isLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {reports && reports.length > 0 ? (
+                  reports.map((report) => (
+                    <Card key={report.id} className="p-6 hover:shadow-lg transition-shadow">
+                      <div className="space-y-3">
+                        <div className="flex items-center space-x-2">
+                          <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
+                            Daglig rapport
+                          </Badge>
+                          <span className="text-sm text-muted-foreground">
+                            {new Date(report.date).toLocaleDateString("sv-SE", {
+                              year: "numeric",
+                              month: "long",
+                              day: "numeric",
+                            })}
+                          </span>
+                        </div>
+                        <h2 className="text-xl font-semibold text-foreground">
+                          {report.title}
+                        </h2>
+                        <p className="text-muted-foreground leading-relaxed line-clamp-3">
+                          {report.content}
+                        </p>
+                      </div>
+                    </Card>
+                  ))
+                ) : (
+                  <p className="text-muted-foreground text-center py-12">
+                    Inga rapporter tillgängliga ännu.
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </main>

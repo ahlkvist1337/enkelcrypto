@@ -29,12 +29,18 @@ export default function Admin() {
 
   const loadAffiliateLinks = async () => {
     try {
-      const { data, error } = await supabase.functions.invoke('admin-api', {
-        body: {},
+      const url = new URL(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-api`);
+      url.searchParams.append('action', 'get-affiliate-links');
+      
+      const response = await fetch(url.toString(), {
         method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
       });
 
-      if (error) throw error;
+      if (!response.ok) throw new Error('Failed to fetch');
+      const data = await response.json();
       setAffiliateLinks(data || []);
     } catch (error) {
       toast({
@@ -58,15 +64,19 @@ export default function Admin() {
     }
 
     try {
-      const { error } = await supabase.functions.invoke('admin-api', {
-        body: { 
-          action: 'add-affiliate-link',
-          ...newLink 
-        },
+      const url = new URL(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-api`);
+      url.searchParams.append('action', 'add-affiliate-link');
+      
+      const response = await fetch(url.toString(), {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newLink),
       });
 
-      if (error) throw error;
+      if (!response.ok) throw new Error('Failed to add');
       
       toast({
         title: "Sparad!",
@@ -86,15 +96,16 @@ export default function Admin() {
 
   const deleteAffiliateLink = async (id: string) => {
     try {
-      const { error } = await supabase.functions.invoke('admin-api', {
-        body: { 
-          action: 'delete-affiliate-link',
-          id 
-        },
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-api`, {
         method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ id }),
       });
 
-      if (error) throw error;
+      if (!response.ok) throw new Error('Failed to delete');
       
       toast({
         title: "Borttagen!",
@@ -114,12 +125,17 @@ export default function Admin() {
   const generateReport = async () => {
     setGenerating(true);
     try {
-      const { data, error } = await supabase.functions.invoke('admin-api', {
-        body: { action: 'generate-report' },
+      const url = new URL(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-api`);
+      url.searchParams.append('action', 'generate-report');
+      
+      const response = await fetch(url.toString(), {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
       });
 
-      if (error) throw error;
+      if (!response.ok) throw new Error('Failed to generate');
       
       toast({
         title: "Genererad!",
