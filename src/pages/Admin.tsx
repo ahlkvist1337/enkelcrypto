@@ -8,6 +8,25 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Plus, Trash2, RefreshCw } from "lucide-react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { supabase } from "@/integrations/supabase/client";
+import { z } from "zod";
+
+const affiliateLinkSchema = z.object({
+  name: z.string()
+    .trim()
+    .min(1, 'Name is required')
+    .max(100, 'Name must be less than 100 characters'),
+  url: z.string()
+    .trim()
+    .url('Invalid URL format')
+    .regex(/^https?:\/\//, 'URL must start with http:// or https://')
+    .max(500, 'URL must be less than 500 characters'),
+  description: z.string()
+    .trim()
+    .max(500, 'Description must be less than 500 characters')
+    .optional()
+    .transform(val => val || '')
+});
 
 interface AffiliateLink {
   id: string;
@@ -31,13 +50,25 @@ export default function Admin() {
 
   const loadAffiliateLinks = async () => {
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        toast({
+          title: "Fel",
+          description: "Du måste vara inloggad",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
       const url = new URL(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-api`);
       url.searchParams.append('action', 'get-affiliate-links');
       
       const response = await fetch(url.toString(), {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          'Authorization': `Bearer ${session.access_token}`,
         },
       });
 
@@ -56,29 +87,45 @@ export default function Admin() {
   };
 
   const addAffiliateLink = async () => {
-    if (!newLink.name || !newLink.url) {
+    // Validate input using zod schema
+    const validation = affiliateLinkSchema.safeParse(newLink);
+    if (!validation.success) {
       toast({
-        title: "Fel",
-        description: "Namn och URL krävs",
+        title: "Ogiltig inmatning",
+        description: validation.error.errors[0].message,
         variant: "destructive",
       });
       return;
     }
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        toast({
+          title: "Fel",
+          description: "Du måste vara inloggad",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const url = new URL(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-api`);
       url.searchParams.append('action', 'add-affiliate-link');
       
       const response = await fetch(url.toString(), {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(newLink),
+        body: JSON.stringify(validation.data),
       });
 
-      if (!response.ok) throw new Error('Failed to add');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to add');
+      }
       
       toast({
         title: "Sparad!",
@@ -90,7 +137,7 @@ export default function Admin() {
     } catch (error) {
       toast({
         title: "Fel",
-        description: "Kunde inte lägga till länk",
+        description: error instanceof Error ? error.message : "Kunde inte lägga till länk",
         variant: "destructive",
       });
     }
@@ -98,10 +145,24 @@ export default function Admin() {
 
   const deleteAffiliateLink = async (id: string) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-api`, {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        toast({
+          title: "Fel",
+          description: "Du måste vara inloggad",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const url = new URL(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-api`);
+      url.searchParams.append('action', 'delete-affiliate-link');
+
+      const response = await fetch(url.toString(), {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ id }),
@@ -127,13 +188,25 @@ export default function Admin() {
   const generateReport = async () => {
     setGenerating(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        toast({
+          title: "Fel",
+          description: "Du måste vara inloggad",
+          variant: "destructive",
+        });
+        setGenerating(false);
+        return;
+      }
+
       const url = new URL(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-api`);
       url.searchParams.append('action', 'generate-report');
       
       const response = await fetch(url.toString(), {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          'Authorization': `Bearer ${session.access_token}`,
         },
       });
 
@@ -157,10 +230,22 @@ export default function Admin() {
   const generateWeeklyReport = async () => {
     setGeneratingWeekly(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        toast({
+          title: "Fel",
+          description: "Du måste vara inloggad",
+          variant: "destructive",
+        });
+        setGeneratingWeekly(false);
+        return;
+      }
+
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-weekly-report`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
         },
       });
