@@ -20,35 +20,27 @@ serve(async (req) => {
     
     console.log('Starting crypto news scraping...');
     
-    // Fetch recent crypto news from RSS feeds and news APIs
-    const newsSearchQueries = [
-      'cryptocurrency latest news',
-      'bitcoin ethereum news today',
-      'crypto market updates',
-      'blockchain technology news'
-    ];
-    
-    const allArticles: any[] = [];
-    
-    // Search for news articles using web search
-    for (const query of newsSearchQueries) {
-      try {
-        // Use a news aggregation approach
-        const searchResults = await searchCryptoNews(query);
-        allArticles.push(...searchResults);
-      } catch (error) {
-        console.error(`Error searching for ${query}:`, error);
+    // Fetch news from CryptoCompare Free API (no API key needed)
+    const newsResponse = await fetch(
+      'https://min-api.cryptocompare.com/data/v2/news/?lang=EN&sortOrder=latest',
+      {
+        headers: {
+          'Accept': 'application/json'
+        }
       }
+    );
+    
+    if (!newsResponse.ok) {
+      throw new Error(`CryptoCompare API error: ${newsResponse.status}`);
     }
     
-    console.log(`Found ${allArticles.length} articles`);
+    const newsData = await newsResponse.json();
+    const allArticles = newsData.Data || [];
     
-    // Remove duplicates based on title similarity
-    const uniqueArticles = removeDuplicates(allArticles);
-    console.log(`After deduplication: ${uniqueArticles.length} articles`);
+    console.log(`Found ${allArticles.length} articles from CryptoCompare`);
     
     // Take top 10 most recent articles
-    const topArticles = uniqueArticles.slice(0, 10);
+    const topArticles = allArticles.slice(0, 10);
     
     // Generate AI summaries for each article
     const today = new Date().toISOString().split('T')[0];
@@ -71,7 +63,7 @@ serve(async (req) => {
               },
               {
                 role: 'user',
-                content: `Sammanfatta denna nyhet i 2-3 meningar på svenska:\n\nTitel: ${article.title}\n\nInnehåll: ${article.content}`
+                content: `Sammanfatta denna nyhet i 2-3 meningar på svenska:\n\nTitel: ${article.title}\n\nInnehåll: ${article.body}`
               }
             ],
           }),
@@ -91,9 +83,9 @@ serve(async (req) => {
           .upsert({
             title: article.title,
             summary: summary,
-            full_content: article.content,
-            source_url: article.url,
-            image_url: article.image || null,
+            full_content: article.body,
+            source_url: article.url || article.guid,
+            image_url: article.imageurl || null,
             date: today
           }, {
             onConflict: 'title',
@@ -148,43 +140,3 @@ serve(async (req) => {
   }
 });
 
-// Mock function to simulate news search - in production, you'd use actual news APIs
-async function searchCryptoNews(query: string): Promise<any[]> {
-  // This is a simplified version - in production you would:
-  // 1. Use RSS feeds from crypto news sites
-  // 2. Use news APIs like NewsAPI, CryptoCompare News API
-  // 3. Scrape from reliable sources
-  
-  // For now, return mock structure that would come from real sources
-  const mockSources = [
-    'CoinDesk', 'CoinTelegraph', 'Decrypt', 'The Block', 'Bitcoin Magazine'
-  ];
-  
-  const articles = [];
-  const numArticles = Math.floor(Math.random() * 3) + 2; // 2-4 articles per query
-  
-  for (let i = 0; i < numArticles; i++) {
-    articles.push({
-      title: `${query} - Article ${i + 1}`,
-      content: `Detailed content about ${query}. This would contain the full article text scraped from the source.`,
-      url: `https://example.com/article-${Date.now()}-${i}`,
-      source: mockSources[Math.floor(Math.random() * mockSources.length)],
-      image: Math.random() > 0.5 ? 'https://picsum.photos/400/300' : null,
-      publishedAt: new Date().toISOString()
-    });
-  }
-  
-  return articles;
-}
-
-function removeDuplicates(articles: any[]): any[] {
-  const seen = new Set();
-  return articles.filter(article => {
-    const normalizedTitle = article.title.toLowerCase().trim();
-    if (seen.has(normalizedTitle)) {
-      return false;
-    }
-    seen.add(normalizedTitle);
-    return true;
-  });
-}
