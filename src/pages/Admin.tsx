@@ -169,7 +169,10 @@ export default function Admin() {
         body: JSON.stringify({ id }),
       });
 
-      if (!response.ok) throw new Error('Failed to delete');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete');
+      }
       
       toast({
         title: "Borttagen!",
@@ -178,9 +181,10 @@ export default function Admin() {
       
       loadAffiliateLinks();
     } catch (error) {
+      console.error('Delete error:', error);
       toast({
         title: "Fel",
-        description: "Kunde inte ta bort länk",
+        description: error instanceof Error ? error.message : "Kunde inte ta bort länk",
         variant: "destructive",
       });
     }
