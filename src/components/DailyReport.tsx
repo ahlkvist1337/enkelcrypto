@@ -13,6 +13,21 @@ export const DailyReport = ({ report }: DailyReportProps) => {
     day: "numeric",
   });
 
+  const formatContent = (content: string) => {
+    // Remove asterisks used for bullet points and convert to proper formatting
+    let formatted = content
+      // Remove bullet point asterisks (newline + asterisk + space)
+      .replace(/\n\s*\*\s+/g, '\n')
+      // Remove standalone asterisks at start of lines
+      .replace(/^\s*\*\s+/gm, '')
+      // Convert **text** to bold
+      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+      // Convert remaining single asterisks around text to bold
+      .replace(/\*([^*\n]+)\*/g, '<strong>$1</strong>');
+    
+    return formatted;
+  };
+
   if (!report) {
     return (
       <Card className="p-6 md:p-8">
@@ -57,9 +72,10 @@ export const DailyReport = ({ report }: DailyReportProps) => {
         </h1>
 
         <div className="prose prose-slate max-w-none">
-          <div className="text-foreground/90 leading-relaxed whitespace-pre-wrap">
-            {report.content}
-          </div>
+          <div 
+            className="text-foreground/90 leading-relaxed whitespace-pre-wrap"
+            dangerouslySetInnerHTML={{ __html: formatContent(report.content) }}
+          />
         </div>
       </div>
     </Card>
