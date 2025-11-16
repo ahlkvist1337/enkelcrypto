@@ -41,6 +41,7 @@ export default function Admin() {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [generatingWeekly, setGeneratingWeekly] = useState(false);
+  const [scrapingNews, setScrapingNews] = useState(false);
   const [newLink, setNewLink] = useState({ name: "", url: "", description: "" });
   const { toast } = useToast();
 
@@ -267,6 +268,46 @@ export default function Admin() {
     }
   };
 
+  const scrapeNews = async () => {
+    setScrapingNews(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        toast({
+          title: "Fel",
+          description: "Du måste vara inloggad",
+          variant: "destructive",
+        });
+        setScrapingNews(false);
+        return;
+      }
+
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/scrape-crypto-news`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) throw new Error('Failed to scrape news');
+      
+      toast({
+        title: "Lyckades!",
+        description: "Nyheter har uppdaterats",
+      });
+    } catch (error) {
+      toast({
+        title: "Fel",
+        description: "Kunde inte hämta nyheter",
+        variant: "destructive",
+      });
+    } finally {
+      setScrapingNews(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex flex-col">
@@ -294,7 +335,7 @@ export default function Admin() {
           <p className="text-muted-foreground mb-6">
             Rapporter genereras automatiskt: Dagligen kl 18:00 och veckovis på söndagar kl 18:00. Du kan också generera dem manuellt här.
           </p>
-          <div className="flex gap-4">
+          <div className="flex flex-wrap gap-4">
             <Button onClick={generateReport} disabled={generating}>
               {generating ? (
                 <>
@@ -318,6 +359,19 @@ export default function Admin() {
                 <>
                   <RefreshCw className="mr-2 h-4 w-4" />
                   Generera Veckorapport
+                </>
+              )}
+            </Button>
+            <Button onClick={scrapeNews} disabled={scrapingNews} variant="outline">
+              {scrapingNews ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Hämtar...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Uppdatera Nyheter
                 </>
               )}
             </Button>
