@@ -81,7 +81,9 @@ export type Database = {
         Row: {
           created_at: string
           date: string
+          full_content: string | null
           id: string
+          image_url: string | null
           source_url: string | null
           summary: string
           title: string
@@ -89,7 +91,9 @@ export type Database = {
         Insert: {
           created_at?: string
           date: string
+          full_content?: string | null
           id?: string
+          image_url?: string | null
           source_url?: string | null
           summary: string
           title: string
@@ -97,7 +101,9 @@ export type Database = {
         Update: {
           created_at?: string
           date?: string
+          full_content?: string | null
           id?: string
+          image_url?: string | null
           source_url?: string | null
           summary?: string
           title?: string
