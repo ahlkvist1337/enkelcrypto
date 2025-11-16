@@ -179,12 +179,26 @@ serve(async (req) => {
     if (action === 'delete-affiliate-link' && req.method === 'DELETE') {
       const { id } = await req.json();
       
+      console.log('Deleting affiliate link:', id);
+      
+      if (!id) {
+        return new Response(JSON.stringify({ error: 'ID is required' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      
       const { error } = await supabase
         .from('affiliate_links')
         .delete()
         .eq('id', id);
       
-      if (error) throw error;
+      if (error) {
+        console.error('Delete error:', error);
+        throw error;
+      }
+      
+      console.log('Successfully deleted affiliate link:', id);
       
       return new Response(JSON.stringify({ success: true }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
