@@ -18,6 +18,33 @@ serve(async (req) => {
     
     const supabase = createClient(supabaseUrl, supabaseKey);
     
+    // Check if request is from an authenticated admin (optional for cron jobs)
+    const authHeader = req.headers.get('Authorization');
+    if (authHeader) {
+      const token = authHeader.replace('Bearer ', '');
+      const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+      
+      if (!authError && user) {
+        // Check if user is admin
+        const { data: roleData } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .eq('role', 'admin')
+          .single();
+        
+        if (!roleData) {
+          return new Response(
+            JSON.stringify({ error: 'Forbidden - Admin access required' }),
+            { 
+              status: 403,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            }
+          );
+        }
+      }
+    }
+    
     console.log('Starting crypto news scraping...');
     
     // Fetch news from CryptoCompare Free API (no API key needed)
