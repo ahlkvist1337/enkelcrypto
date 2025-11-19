@@ -13,10 +13,19 @@ export const NewsSection = () => {
 
   const getTimeAgo = (dateString: string) => {
     try {
-      return formatDistanceToNow(new Date(dateString), { 
-        addSuffix: true, 
-        locale: sv 
-      });
+      const date = new Date(dateString);
+      const hoursAgo = Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60));
+      
+      if (hoursAgo < 1) {
+        return "Mindre än en timme sedan";
+      } else if (hoursAgo === 1) {
+        return "1 timme sedan";
+      } else if (hoursAgo < 24) {
+        return `${hoursAgo} timmar sedan`;
+      } else {
+        const daysAgo = Math.floor(hoursAgo / 24);
+        return daysAgo === 1 ? "1 dag sedan" : `${daysAgo} dagar sedan`;
+      }
     } catch {
       return "Nyligen";
     }

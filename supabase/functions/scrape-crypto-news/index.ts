@@ -66,8 +66,16 @@ serve(async (req) => {
     
     console.log(`Found ${allArticles.length} articles from CryptoCompare`);
     
-    // Take top 10 most recent articles
-    const topArticles = allArticles.slice(0, 10);
+    // Filter articles from last 24 hours
+    const twentyFourHoursAgo = Date.now() / 1000 - (24 * 60 * 60);
+    const recentArticles = allArticles.filter((article: any) => 
+      article.published_on >= twentyFourHoursAgo
+    );
+    
+    console.log(`Filtered to ${recentArticles.length} articles from last 24 hours`);
+    
+    // Take 5-10 most recent articles
+    const topArticles = recentArticles.slice(0, 10);
     
     // Generate AI summaries for each article
     const today = new Date().toISOString().split('T')[0];
