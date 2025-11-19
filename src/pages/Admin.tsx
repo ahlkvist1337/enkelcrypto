@@ -10,6 +10,8 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { supabase } from "@/integrations/supabase/client";
 import { z } from "zod";
+import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
 
 const affiliateLinkSchema = z.object({
   name: z.string()
@@ -144,7 +146,57 @@ export default function Admin() {
     }
   };
 
+  const toggleAffiliateLink = async (id: string, currentActive: boolean) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        toast({
+          title: "Fel",
+          description: "Du måste vara inloggad",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const url = new URL(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-api`);
+      url.searchParams.append('action', 'toggle-affiliate-link');
+
+      const response = await fetch(url.toString(), {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ id, active: !currentActive }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to toggle');
+      }
+      
+      toast({
+        title: "Uppdaterad!",
+        description: `Affiliatelänk ${!currentActive ? 'aktiverad' : 'inaktiverad'}`,
+      });
+      
+      loadAffiliateLinks();
+    } catch (error) {
+      console.error('Toggle error:', error);
+      toast({
+        title: "Fel",
+        description: error instanceof Error ? error.message : "Kunde inte uppdatera länk",
+        variant: "destructive",
+      });
+    }
+  };
+
   const deleteAffiliateLink = async (id: string) => {
+    if (!confirm('Är du säker på att du vill radera denna länk permanent? Överväg att inaktivera den istället.')) {
+      return;
+    }
+
     try {
       const { data: { session } } = await supabase.auth.getSession();
       
@@ -176,7 +228,7 @@ export default function Admin() {
       
       toast({
         title: "Borttagen!",
-        description: "Affiliatelänk borttagen",
+        description: "Affiliatelänk permanent borttagen",
       });
       
       loadAffiliateLinks();
@@ -421,26 +473,45 @@ export default function Admin() {
 
         <Card className="p-6">
           <h2 className="text-2xl font-bold text-foreground mb-4">Affiliatelänkar</h2>
+          <p className="text-sm text-muted-foreground mb-4">
+            Använd switchen för att aktivera/inaktivera länkar. Endast aktiva länkar visas på hemsidan.
+          </p>
           <div className="space-y-4">
             {affiliateLinks.length === 0 ? (
               <p className="text-muted-foreground">Inga affiliatelänkar ännu</p>
             ) : (
               affiliateLinks.map((link) => (
-                <div key={link.id} className="flex items-center justify-between p-4 border border-border rounded-lg">
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-foreground">{link.name}</h3>
+                <div key={link.id} className="flex items-center justify-between gap-4 p-4 border border-border rounded-lg">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="font-semibold text-foreground">{link.name}</h3>
+                      <Badge variant={link.active ? "default" : "secondary"}>
+                        {link.active ? "Aktiv" : "Inaktiv"}
+                      </Badge>
+                    </div>
                     <p className="text-sm text-muted-foreground truncate">{link.url}</p>
                     {link.description && (
                       <p className="text-sm text-muted-foreground mt-1">{link.description}</p>
                     )}
                   </div>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => deleteAffiliateLink(link.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex flex-col items-center gap-1">
+                      <Switch
+                        checked={link.active}
+                        onCheckedChange={() => toggleAffiliateLink(link.id, link.active)}
+                      />
+                      <span className="text-xs text-muted-foreground">
+                        {link.active ? "På" : "Av"}
+                      </span>
+                    </div>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => deleteAffiliateLink(link.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               ))
             )}
