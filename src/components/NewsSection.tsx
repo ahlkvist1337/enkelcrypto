@@ -122,7 +122,7 @@ export const NewsSection = () => {
             
             <div className="prose prose-slate max-w-none">
               <p className="text-foreground/90 leading-relaxed whitespace-pre-wrap">
-                {selectedNews?.full_content || selectedNews?.summary}
+                {selectedNews?.summary}
               </p>
             </div>
             
@@ -133,8 +133,8 @@ export const NewsSection = () => {
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 text-primary hover:underline text-sm"
               >
-                Läs originalkälla
-                <ExternalLink className="h-4 w-4" />
+                <ExternalLink className="w-4 h-4" />
+                Läs hela artikeln (engelska)
               </a>
             )}
           </div>

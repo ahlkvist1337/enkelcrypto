@@ -94,11 +94,11 @@ serve(async (req) => {
             messages: [
               {
                 role: 'system',
-                content: 'Du är en nyhetsredaktör som skriver korta, sakliga sammanfattningar av krypto-nyheter på svenska. Håll dig till fakta från källan.'
+                content: 'Du är en nyhetsredaktör som översätter och sammanfattar krypto-nyheter till svenska. Svara endast med JSON i formatet: {"title": "svensk titel", "summary": "2-3 meningar sammanfattning"}. Ingen extra text.'
               },
               {
                 role: 'user',
-                content: `Sammanfatta denna nyhet i 2-3 meningar på svenska:\n\nTitel: ${article.title}\n\nInnehåll: ${article.body}`
+                content: `Översätt titeln och sammanfatta denna nyhet på svenska:\n\nTitel: ${article.title}\n\nInnehåll: ${article.body}`
               }
             ],
           }),
@@ -110,13 +110,25 @@ serve(async (req) => {
         }
 
         const aiData = await aiResponse.json();
-        const summary = aiData.choices[0].message.content;
+        const aiContent = aiData.choices[0].message.content;
+        
+        // Parse JSON response
+        let swedishTitle = article.title;
+        let summary = aiContent;
+        
+        try {
+          const parsed = JSON.parse(aiContent);
+          swedishTitle = parsed.title || article.title;
+          summary = parsed.summary || aiContent;
+        } catch (e) {
+          console.log('Failed to parse AI JSON, using raw content as summary');
+        }
         
         // Save to database (upsert to avoid duplicates)
         const { error: insertError } = await supabase
           .from('news')
           .upsert({
-            title: article.title,
+            title: swedishTitle,
             summary: summary,
             full_content: article.body,
             source_url: article.url || article.guid,
