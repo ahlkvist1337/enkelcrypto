@@ -26,7 +26,7 @@ const Index = () => {
       <Header />
       <main className="flex-grow">
         <div className="container mx-auto px-4 py-8 space-y-8">
-          <DailyReport report={report} />
+          {report && <DailyReport report={report} />}
           <MarketOverview marketData={marketData} />
           <WinnersLosers movers={movers} />
           <AffiliateLinks />
