@@ -135,7 +135,7 @@ export default function Auth() {
             {isLogin ? "Logga in" : "Skapa konto"}
           </h1>
           <p className="text-muted-foreground">
-            {isLogin ? "Välkommen tillbaka till CryptoWatch" : "Registrera dig för CryptoWatch"}
+            {isLogin ? "Välkommen tillbaka till EnkelCrypto" : "Registrera dig för EnkelCrypto"}
           </p>
         </div>
 

@@ -61,7 +61,7 @@ export const AffiliateLinks = () => {
         ))}
       </div>
       <p className="text-xs text-muted-foreground mt-4 italic">
-        * Detta är affiliate-länkar. CryptoWatch kan få ersättning om du registrerar dig.
+        * Detta är affiliate-länkar. EnkelCrypto kan få ersättning om du registrerar dig.
       </p>
     </Card>
   );
