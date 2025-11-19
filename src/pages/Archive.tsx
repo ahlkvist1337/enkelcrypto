@@ -3,10 +3,19 @@ import { Footer } from "@/components/Footer";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Loader2 } from "lucide-react";
-import { useReports } from "@/hooks/useCryptoData";
+import { useReports, Report } from "@/hooks/useCryptoData";
+import { useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const Archive = () => {
   const { data: reports, isLoading } = useReports('daily');
+  const [selectedReport, setSelectedReport] = useState<Report | null>(null);
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -31,7 +40,11 @@ const Archive = () => {
               <div className="space-y-4">
                 {reports && reports.length > 0 ? (
                   reports.map((report) => (
-                    <Card key={report.id} className="p-6 hover:shadow-lg transition-shadow">
+                    <Card 
+                      key={report.id} 
+                      className="p-6 hover:shadow-lg transition-shadow cursor-pointer"
+                      onClick={() => setSelectedReport(report)}
+                    >
                       <div className="space-y-3">
                         <div className="flex items-center space-x-2">
                           <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
@@ -61,6 +74,26 @@ const Archive = () => {
                 )}
               </div>
             )}
+            
+            <Dialog open={!!selectedReport} onOpenChange={() => setSelectedReport(null)}>
+              <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle className="text-2xl">{selectedReport?.title}</DialogTitle>
+                  <DialogDescription>
+                    {selectedReport && new Date(selectedReport.date).toLocaleDateString("sv-SE", {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    })}
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="mt-4 prose prose-gray dark:prose-invert max-w-none">
+                  <p className="whitespace-pre-wrap text-foreground leading-relaxed">
+                    {selectedReport?.content}
+                  </p>
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
       </main>
