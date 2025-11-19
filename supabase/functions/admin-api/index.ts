@@ -175,6 +175,45 @@ serve(async (req) => {
       });
     }
     
+    // Toggle affiliate link active status
+    if (action === 'toggle-affiliate-link' && req.method === 'PATCH') {
+      const { id, active } = await req.json();
+      
+      console.log('Toggling affiliate link:', id, 'to active:', active);
+      
+      if (!id) {
+        return new Response(JSON.stringify({ error: 'ID is required' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      
+      if (typeof active !== 'boolean') {
+        return new Response(JSON.stringify({ error: 'Active must be a boolean' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      
+      const { data, error } = await supabase
+        .from('affiliate_links')
+        .update({ active })
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('Toggle error:', error);
+        throw error;
+      }
+      
+      console.log('Successfully toggled affiliate link:', id);
+      
+      return new Response(JSON.stringify(data), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    
     // Delete affiliate link
     if (action === 'delete-affiliate-link' && req.method === 'DELETE') {
       const { id } = await req.json();
@@ -195,7 +234,10 @@ serve(async (req) => {
       
       if (error) {
         console.error('Delete error:', error);
-        throw error;
+        return new Response(JSON.stringify({ error: error.message }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
       
       console.log('Successfully deleted affiliate link:', id);
