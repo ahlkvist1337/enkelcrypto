@@ -17,6 +17,11 @@ const Archive = () => {
   const { data: reports, isLoading } = useReports('daily');
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
 
+  const formatContent = (content: string) => {
+    // Convert **text** to <strong>text</strong> for bold formatting
+    return content.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  };
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Header />
@@ -88,9 +93,10 @@ const Archive = () => {
                   </DialogDescription>
                 </DialogHeader>
                 <div className="mt-4 prose prose-gray dark:prose-invert max-w-none">
-                  <p className="whitespace-pre-wrap text-foreground leading-relaxed">
-                    {selectedReport?.content}
-                  </p>
+                  <div 
+                    className="whitespace-pre-wrap text-foreground leading-relaxed"
+                    dangerouslySetInnerHTML={{ __html: selectedReport ? formatContent(selectedReport.content) : '' }}
+                  />
                 </div>
               </DialogContent>
             </Dialog>
