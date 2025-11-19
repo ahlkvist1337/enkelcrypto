@@ -75,13 +75,17 @@ export default function Admin() {
         },
       });
 
-      if (!response.ok) throw new Error('Failed to fetch');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(errorData.error || `HTTP ${response.status}`);
+      }
       const data = await response.json();
       setAffiliateLinks(data || []);
     } catch (error) {
+      console.error('Load affiliate links error:', error);
       toast({
         title: "Fel",
-        description: "Kunde inte ladda affiliatelänkar",
+        description: error instanceof Error ? error.message : "Kunde inte ladda affiliatelänkar",
         variant: "destructive",
       });
     } finally {
@@ -222,8 +226,8 @@ export default function Admin() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to delete');
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(errorData.error || `HTTP ${response.status}: Failed to delete`);
       }
       
       toast({
