@@ -30,11 +30,12 @@ export const useTodaysReport = () => {
         .select('*')
         .eq('type', 'daily')
         .eq('date', today)
-        .single();
+        .maybeSingle();
       
       if (error) throw error;
-      return data as Report;
+      return data as Report | null;
     },
+    retry: 1,
   });
 };
 
@@ -52,6 +53,7 @@ export const useMarketMovers = () => {
       if (error) throw error;
       return data as MarketMover[];
     },
+    retry: 1,
   });
 };
 
@@ -73,6 +75,7 @@ export const useReports = (type?: 'daily' | 'weekly') => {
       if (error) throw error;
       return data as Report[];
     },
+    retry: 1,
   });
 };
 
@@ -80,11 +83,17 @@ export const useCryptoMarketData = () => {
   return useQuery({
     queryKey: ['crypto-market-data'],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke('fetch-crypto-data');
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/fetch-crypto-data`
+      );
       
-      if (error) throw error;
-      return data;
+      if (!response.ok) {
+        throw new Error('Failed to fetch crypto data');
+      }
+      
+      return await response.json();
     },
     refetchInterval: 60000, // Refresh every minute
+    staleTime: 30000, // Consider data fresh for 30 seconds
   });
 };
