@@ -20,6 +20,23 @@ serve(async (req) => {
     
     console.log('Starting daily report generation...');
     
+    // Check if report already exists for today
+    const today = new Date().toISOString().split('T')[0];
+    const { data: existingReport } = await supabase
+      .from('reports')
+      .select('id')
+      .eq('type', 'daily')
+      .eq('date', today)
+      .maybeSingle();
+    
+    if (existingReport) {
+      console.log('Report already exists for today, skipping generation');
+      return new Response(
+        JSON.stringify({ message: 'Report already exists for today' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      );
+    }
+    
     // Fetch crypto data
     const cryptoDataResponse = await fetch(`${supabaseUrl}/functions/v1/fetch-crypto-data`, {
       headers: { Authorization: `Bearer ${supabaseKey}` },
@@ -112,7 +129,6 @@ VIKTIGT: Använd aldrig ord som "investera", "köp", "sälj" - använd istället
     console.log('Saving report to database...');
     
     // Save report to database
-    const today = new Date().toISOString().split('T')[0];
     const { error: reportError } = await supabase
       .from('reports')
       .insert({
