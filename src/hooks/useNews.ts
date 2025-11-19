@@ -20,7 +20,7 @@ export const useNews = () => {
         .from("news")
         .select("*")
         .order("date", { ascending: false })
-        .limit(6);
+        .limit(8);
 
       if (error) throw error;
       return data as NewsItem[];
