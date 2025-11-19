@@ -14,18 +14,8 @@ export const DailyReport = ({ report }: DailyReportProps) => {
   });
 
   const formatContent = (content: string) => {
-    // Remove asterisks used for bullet points and convert to proper formatting
-    let formatted = content
-      // Remove bullet point asterisks (newline + asterisk + space)
-      .replace(/\n\s*\*\s+/g, '\n')
-      // Remove standalone asterisks at start of lines
-      .replace(/^\s*\*\s+/gm, '')
-      // Convert **text** to bold
-      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-      // Convert remaining single asterisks around text to bold
-      .replace(/\*([^*\n]+)\*/g, '<strong>$1</strong>');
-    
-    return formatted;
+    // Convert **text** to <strong>text</strong> for bold formatting
+    return content.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
   };
 
   if (!report) {
