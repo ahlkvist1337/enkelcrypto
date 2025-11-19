@@ -20,6 +20,35 @@ serve(async (req) => {
     
     console.log('Starting weekly report generation...');
     
+    // Check if today is Sunday (0 = Sunday)
+    const today = new Date();
+    const dayOfWeek = today.getDay();
+    
+    if (dayOfWeek !== 0) {
+      console.log('Not Sunday, skipping weekly report generation');
+      return new Response(
+        JSON.stringify({ message: 'Weekly reports are only generated on Sundays' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      );
+    }
+    
+    // Check if report already exists for this week
+    const todayStr = today.toISOString().split('T')[0];
+    const { data: existingReport } = await supabase
+      .from('reports')
+      .select('id')
+      .eq('type', 'weekly')
+      .eq('date', todayStr)
+      .maybeSingle();
+    
+    if (existingReport) {
+      console.log('Weekly report already exists for this week, skipping generation');
+      return new Response(
+        JSON.stringify({ message: 'Weekly report already exists for this week' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      );
+    }
+    
     // Fetch crypto data
     const cryptoDataResponse = await fetch(`${supabaseUrl}/functions/v1/fetch-crypto-data`, {
       headers: { Authorization: `Bearer ${supabaseKey}` },
@@ -32,7 +61,6 @@ serve(async (req) => {
     const cryptoData = await cryptoDataResponse.json();
     
     // Get date range for the week
-    const today = new Date();
     const oneWeekAgo = new Date(today);
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
     
