@@ -7,13 +7,13 @@ export const Footer = () => {
             <div className="h-6 w-6 rounded-md bg-primary flex items-center justify-center">
               <span className="text-primary-foreground font-bold text-sm">₿</span>
             </div>
-            <span className="font-semibold text-foreground">CryptoWatch</span>
+            <span className="font-semibold text-foreground">EnkelCrypto</span>
           </div>
           
           <div className="text-sm text-muted-foreground space-y-2">
             <p className="font-medium">Ansvarsfriskrivning</p>
             <p>
-              CryptoWatch tillhandahåller enbart informationssammanfattningar om kryptomarknaden. 
+              EnkelCrypto tillhandahåller enbart informationssammanfattningar om kryptomarknaden. 
               Inget innehåll på denna webbplats utgör finansiell rådgivning eller köp/sälj-rekommendationer.
             </p>
             <p>
@@ -23,7 +23,7 @@ export const Footer = () => {
           </div>
 
           <div className="pt-4 border-t border-border text-xs text-muted-foreground">
-            <p>© {new Date().getFullYear()} CryptoWatch. Alla rättigheter förbehållna.</p>
+            <p>© {new Date().getFullYear()} EnkelCrypto. Alla rättigheter förbehållna.</p>
           </div>
         </div>
       </div>

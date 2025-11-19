@@ -23,7 +23,7 @@ export const Header = () => {
             <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
               <span className="text-primary-foreground font-bold text-lg">₿</span>
             </div>
-            <span className="text-xl font-bold text-foreground">CryptoWatch</span>
+            <span className="text-xl font-bold text-foreground">EnkelCrypto</span>
           </NavLink>
 
           {/* Desktop Navigation */}
