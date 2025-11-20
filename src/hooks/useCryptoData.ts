@@ -24,12 +24,12 @@ export const useTodaysReport = () => {
   return useQuery({
     queryKey: ['todays-report'],
     queryFn: async () => {
-      const today = new Date().toISOString().split('T')[0];
       const { data, error } = await supabase
         .from('reports')
         .select('*')
         .eq('type', 'daily')
-        .eq('date', today)
+        .order('date', { ascending: false })
+        .limit(1)
         .maybeSingle();
       
       if (error) throw error;
