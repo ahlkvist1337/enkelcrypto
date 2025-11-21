@@ -43,11 +43,22 @@ export const useMarketMovers = () => {
   return useQuery({
     queryKey: ['market-movers'],
     queryFn: async () => {
-      const today = new Date().toISOString().split('T')[0];
+      // Get the latest available date from market_movers
+      const { data: latestData, error: latestError } = await supabase
+        .from('market_movers')
+        .select('date')
+        .order('date', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
+      if (latestError) throw latestError;
+      if (!latestData) return [];
+      
+      // Fetch all movers for the latest date
       const { data, error } = await supabase
         .from('market_movers')
         .select('*')
-        .eq('date', today)
+        .eq('date', latestData.date)
         .order('price_change', { ascending: false });
       
       if (error) throw error;

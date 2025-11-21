@@ -112,12 +112,14 @@ serve(async (req) => {
         const aiData = await aiResponse.json();
         const aiContent = aiData.choices[0].message.content;
         
-        // Parse JSON response
+        // Parse JSON response and remove markdown formatting if present
         let swedishTitle = article.title;
         let summary = aiContent;
         
         try {
-          const parsed = JSON.parse(aiContent);
+          // Remove markdown code blocks if present (```json and ```)
+          let cleanContent = aiContent.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+          const parsed = JSON.parse(cleanContent);
           swedishTitle = parsed.title || article.title;
           summary = parsed.summary || aiContent;
         } catch (e) {
