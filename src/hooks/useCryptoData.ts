@@ -72,21 +72,31 @@ export const useReports = (type?: 'daily' | 'weekly') => {
   return useQuery({
     queryKey: ['reports', type],
     queryFn: async () => {
-      let query = supabase
-        .from('reports')
-        .select('*')
-        .order('date', { ascending: false });
-      
-      if (type) {
-        query = query.eq('type', type);
-      }
-      
-      const { data, error } = await query;
-      
-      if (error) throw error;
-      return data as Report[];
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Request timeout')), 15000)
+      );
+
+      const queryPromise = (async () => {
+        let query = supabase
+          .from('reports')
+          .select('*')
+          .order('date', { ascending: false });
+        
+        if (type) {
+          query = query.eq('type', type);
+        }
+        
+        const { data, error } = await query;
+        
+        if (error) throw error;
+        return data as Report[];
+      })();
+
+      return Promise.race([queryPromise, timeoutPromise]) as Promise<Report[]>;
     },
-    retry: 1,
+    retry: 2,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 };
 
