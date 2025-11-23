@@ -1,12 +1,14 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Report } from "@/hooks/useCryptoData";
 
 interface DailyReportProps {
   report?: Report;
+  isLoading?: boolean;
 }
 
-export const DailyReport = ({ report }: DailyReportProps) => {
+export const DailyReport = ({ report, isLoading }: DailyReportProps) => {
   const today = new Date().toLocaleDateString("sv-SE", {
     year: "numeric",
     month: "long",
@@ -17,6 +19,26 @@ export const DailyReport = ({ report }: DailyReportProps) => {
     // Convert **text** to <strong>text</strong> for bold formatting
     return content.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
   };
+
+  if (isLoading) {
+    return (
+      <Card className="p-6 md:p-8">
+        <div className="space-y-4">
+          <div className="flex items-center space-x-2">
+            <Skeleton className="h-6 w-24" />
+            <Skeleton className="h-4 w-32" />
+          </div>
+          <Skeleton className="h-10 w-3/4" />
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-5/6" />
+          </div>
+        </div>
+      </Card>
+    );
+  }
 
   if (!report) {
     return (
