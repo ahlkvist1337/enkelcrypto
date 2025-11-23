@@ -1,12 +1,42 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { MarketMover } from "@/hooks/useCryptoData";
 
 interface WinnersLosersProps {
   movers?: MarketMover[];
+  isLoading?: boolean;
 }
 
-export const WinnersLosers = ({ movers }: WinnersLosersProps) => {
+export const WinnersLosers = ({ movers, isLoading }: WinnersLosersProps) => {
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {[1, 2].map((i) => (
+          <Card key={i} className="p-6">
+            <div className="flex items-center mb-4">
+              <Skeleton className="h-8 w-48" />
+            </div>
+            <div className="space-y-4">
+              {[1, 2, 3].map((j) => (
+                <div key={j} className="flex items-start space-x-3 pb-4 border-b border-border">
+                  <Skeleton className="h-6 w-8" />
+                  <div className="flex-grow space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Skeleton className="h-5 w-32" />
+                      <Skeleton className="h-6 w-16" />
+                    </div>
+                    <Skeleton className="h-4 w-full" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        ))}
+      </div>
+    );
+  }
+  
   if (!movers || movers.length === 0) {
     return (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

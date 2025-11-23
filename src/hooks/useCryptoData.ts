@@ -68,9 +68,9 @@ export const useMarketMovers = () => {
   });
 };
 
-export const useReports = (type?: 'daily' | 'weekly') => {
+export const useReports = (type?: 'daily' | 'weekly', limit?: number) => {
   return useQuery({
-    queryKey: ['reports', type],
+    queryKey: ['reports', type, limit],
     queryFn: async () => {
       const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error('Request timeout')), 15000)
@@ -84,6 +84,10 @@ export const useReports = (type?: 'daily' | 'weekly') => {
         
         if (type) {
           query = query.eq('type', type);
+        }
+        
+        if (limit) {
+          query = query.limit(limit);
         }
         
         const { data, error } = await query;

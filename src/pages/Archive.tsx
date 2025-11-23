@@ -2,9 +2,11 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Loader2, AlertCircle } from "lucide-react";
 import { useReports, Report } from "@/hooks/useCryptoData";
 import { useState } from "react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Dialog,
   DialogContent,
@@ -14,7 +16,7 @@ import {
 } from "@/components/ui/dialog";
 
 const Archive = () => {
-  const { data: reports, isLoading } = useReports('daily');
+  const { data: reports, isLoading, error } = useReports('daily', 30);
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
 
   const formatContent = (content: string) => {
@@ -37,9 +39,35 @@ const Archive = () => {
               </p>
             </div>
 
+            {error && (
+              <Alert variant="destructive" className="mb-6">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  {error instanceof Error && error.message === 'Request timeout'
+                    ? 'Anslutningen tog för lång tid. Kontrollera din internetanslutning och försök igen.'
+                    : 'Det gick inte att ladda rapporter. Vänligen försök igen om en stund.'}
+                </AlertDescription>
+              </Alert>
+            )}
+
             {isLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <div className="space-y-4">
+                {[1, 2, 3].map((i) => (
+                  <Card key={i} className="p-6">
+                    <div className="space-y-3">
+                      <div className="flex items-center space-x-2">
+                        <Skeleton className="h-6 w-32" />
+                        <Skeleton className="h-4 w-40" />
+                      </div>
+                      <Skeleton className="h-6 w-3/4" />
+                      <div className="space-y-2">
+                        <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-4 w-5/6" />
+                      </div>
+                    </div>
+                  </Card>
+                ))}
               </div>
             ) : (
               <div className="space-y-4">
