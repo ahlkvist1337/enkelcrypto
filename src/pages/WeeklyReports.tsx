@@ -3,14 +3,24 @@ import { Footer } from "@/components/Footer";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ShareButtons } from "@/components/ShareButtons";
+import { SEOHead } from "@/components/SEOHead";
 import { Loader2, AlertCircle } from "lucide-react";
 import { useReports } from "@/hooks/useCryptoData";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const WeeklyReports = () => {
-  const { data: reports, isLoading, error } = useReports('weekly');
+  const { data, isLoading, error } = useReports('weekly');
+  
+  const reports = data?.reports || [];
 
   return (
+    <>
+      <SEOHead 
+        title="Veckorapporter"
+        description="Djupare analyser och sammanfattningar av veckans kryptohändelser. Få en helhetsbild av marknadstrender och viktiga händelser på kryptomarknaden."
+        canonical="https://enkelcrypto.se/veckorapporter"
+      />
     <div className="min-h-screen bg-background flex flex-col">
       <Header />
       <main className="flex-grow">
@@ -60,18 +70,21 @@ const WeeklyReports = () => {
                 {reports && reports.length > 0 ? (
                   reports.map((report) => (
                     <Card key={report.id} className="p-6 hover:shadow-lg transition-shadow">
-                      <div className="space-y-3">
-                        <div className="flex items-center space-x-2">
-                          <Badge variant="outline" className="bg-accent/10 text-accent border-accent/20">
-                            Veckorapport
-                          </Badge>
-                          <span className="text-sm text-muted-foreground">
-                            {new Date(report.date).toLocaleDateString("sv-SE", {
-                              year: "numeric",
-                              month: "long",
-                              day: "numeric",
-                            })}
-                          </span>
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between flex-wrap gap-4">
+                          <div className="flex items-center space-x-2">
+                            <Badge variant="outline" className="bg-accent/10 text-accent border-accent/20">
+                              Veckorapport
+                            </Badge>
+                            <span className="text-sm text-muted-foreground">
+                              {new Date(report.date).toLocaleDateString("sv-SE", {
+                                year: "numeric",
+                                month: "long",
+                                day: "numeric",
+                              })}
+                            </span>
+                          </div>
+                          <ShareButtons title={report.title} />
                         </div>
                         <h2 className="text-2xl md:text-3xl font-bold text-foreground">
                           {report.title}
@@ -103,6 +116,7 @@ const WeeklyReports = () => {
       </main>
       <Footer />
     </div>
+    </>
   );
 };
 

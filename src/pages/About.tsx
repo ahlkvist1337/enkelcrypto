@@ -1,9 +1,16 @@
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { SEOHead } from "@/components/SEOHead";
 import { Card } from "@/components/ui/card";
 
 const About = () => {
   return (
+    <>
+      <SEOHead 
+        title="Om EnkelCrypto"
+        description="Lär dig mer om EnkelCrypto - din dagliga källa för kryptonyheter och marknadsanalyser på svenska. Enkel, tydlig information utan teknisk jargong."
+        canonical="https://enkelcrypto.se/om"
+      />
     <div className="min-h-screen bg-background flex flex-col">
       <Header />
       <main className="flex-grow">
@@ -58,6 +65,7 @@ const About = () => {
       </main>
       <Footer />
     </div>
+    </>
   );
 };
 

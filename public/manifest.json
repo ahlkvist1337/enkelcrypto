@@ -1,0 +1,16 @@
+{
+  "name": "EnkelCrypto",
+  "short_name": "EnkelCrypto",
+  "description": "Daglig kryptosammanfattning på svenska",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#8B5CF6",
+  "icons": [
+    {
+      "src": "/favicon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}
