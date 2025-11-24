@@ -3,6 +3,9 @@ import { Footer } from "@/components/Footer";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { ShareButtons } from "@/components/ShareButtons";
+import { SEOHead } from "@/components/SEOHead";
 import { Loader2, AlertCircle } from "lucide-react";
 import { useReports, Report } from "@/hooks/useCryptoData";
 import { useState } from "react";
@@ -15,9 +18,20 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
+const REPORTS_PER_PAGE = 10;
+
 const Archive = () => {
-  const { data: reports, isLoading, error } = useReports('daily', 30);
+  const [offset, setOffset] = useState(0);
+  const { data, isLoading, error } = useReports('daily', REPORTS_PER_PAGE, offset);
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
+  
+  const reports = data?.reports || [];
+  const totalCount = data?.totalCount || 0;
+  const hasMore = offset + REPORTS_PER_PAGE < totalCount;
+
+  const handleLoadMore = () => {
+    setOffset(prev => prev + REPORTS_PER_PAGE);
+  };
 
   const formatContent = (content: string) => {
     // Convert **text** to <strong>text</strong> for bold formatting
@@ -25,6 +39,12 @@ const Archive = () => {
   };
 
   return (
+    <>
+      <SEOHead 
+        title="Rapportarkiv"
+        description="Utforska tidigare dagliga kryptorapporter från EnkelCrypto. Få insikter om marknadsutveckling och historiska prisrörelser för Bitcoin och Ethereum."
+        canonical="https://enkelcrypto.se/arkiv"
+      />
     <div className="min-h-screen bg-background flex flex-col">
       <Header />
       <main className="flex-grow">
@@ -72,34 +92,56 @@ const Archive = () => {
             ) : (
               <div className="space-y-4">
                 {reports && reports.length > 0 ? (
-                  reports.map((report) => (
-                    <Card 
-                      key={report.id} 
-                      className="p-6 hover:shadow-lg transition-shadow cursor-pointer"
-                      onClick={() => setSelectedReport(report)}
-                    >
-                      <div className="space-y-3">
-                        <div className="flex items-center space-x-2">
-                          <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
-                            Daglig rapport
-                          </Badge>
-                          <span className="text-sm text-muted-foreground">
-                            {new Date(report.date).toLocaleDateString("sv-SE", {
-                              year: "numeric",
-                              month: "long",
-                              day: "numeric",
-                            })}
-                          </span>
+                  <>
+                    {reports.map((report) => (
+                      <Card 
+                        key={report.id} 
+                        className="p-6 hover:shadow-lg transition-shadow cursor-pointer"
+                        onClick={() => setSelectedReport(report)}
+                      >
+                        <div className="space-y-3">
+                          <div className="flex items-center space-x-2">
+                            <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
+                              Daglig rapport
+                            </Badge>
+                            <span className="text-sm text-muted-foreground">
+                              {new Date(report.date).toLocaleDateString("sv-SE", {
+                                year: "numeric",
+                                month: "long",
+                                day: "numeric",
+                              })}
+                            </span>
+                          </div>
+                          <h2 className="text-xl font-semibold text-foreground">
+                            {report.title}
+                          </h2>
+                          <p className="text-muted-foreground leading-relaxed line-clamp-3">
+                            {report.content}
+                          </p>
                         </div>
-                        <h2 className="text-xl font-semibold text-foreground">
-                          {report.title}
-                        </h2>
-                        <p className="text-muted-foreground leading-relaxed line-clamp-3">
-                          {report.content}
-                        </p>
+                      </Card>
+                    ))}
+                    
+                    {hasMore && (
+                      <div className="flex flex-col items-center gap-2 py-6">
+                        <Button
+                          onClick={handleLoadMore}
+                          disabled={isLoading}
+                          variant="outline"
+                          size="lg"
+                        >
+                          {isLoading ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Laddar...
+                            </>
+                          ) : (
+                            `Ladda fler (${totalCount - offset - REPORTS_PER_PAGE} kvar)`
+                          )}
+                        </Button>
                       </div>
-                    </Card>
-                  ))
+                    )}
+                  </>
                 ) : (
                   <p className="text-muted-foreground text-center py-12">
                     Inga rapporter tillgängliga ännu.
@@ -111,14 +153,19 @@ const Archive = () => {
             <Dialog open={!!selectedReport} onOpenChange={() => setSelectedReport(null)}>
               <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
                 <DialogHeader>
-                  <DialogTitle className="text-2xl">{selectedReport?.title}</DialogTitle>
-                  <DialogDescription>
-                    {selectedReport && new Date(selectedReport.date).toLocaleDateString("sv-SE", {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })}
-                  </DialogDescription>
+                  <div className="space-y-4">
+                    <DialogTitle className="text-2xl">{selectedReport?.title}</DialogTitle>
+                    <div className="flex items-center justify-between flex-wrap gap-4">
+                      <DialogDescription>
+                        {selectedReport && new Date(selectedReport.date).toLocaleDateString("sv-SE", {
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                        })}
+                      </DialogDescription>
+                      {selectedReport && <ShareButtons title={selectedReport.title} />}
+                    </div>
+                  </div>
                 </DialogHeader>
                 <div className="mt-4 prose prose-gray dark:prose-invert max-w-none">
                   <div 
@@ -133,6 +180,7 @@ const Archive = () => {
       </main>
       <Footer />
     </div>
+    </>
   );
 };
 

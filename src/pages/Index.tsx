@@ -5,6 +5,8 @@ import { MarketOverview } from "@/components/MarketOverview";
 import { WinnersLosers } from "@/components/WinnersLosers";
 import { NewsSection } from "@/components/NewsSection";
 import { AffiliateLinks } from "@/components/AffiliateLinks";
+import { PriceChart } from "@/components/PriceChart";
+import { SEOHead } from "@/components/SEOHead";
 import { useTodaysReport, useMarketMovers, useCryptoMarketData } from "@/hooks/useCryptoData";
 
 const Index = () => {
@@ -13,19 +15,23 @@ const Index = () => {
   const { data: marketData, isLoading: marketLoading, isError: marketError } = useCryptoMarketData();
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <Header />
-      <main className="flex-grow">
-        <div className="container mx-auto px-4 py-8 space-y-8">
-          <DailyReport report={report} isLoading={reportLoading && !reportError} />
-          <MarketOverview marketData={marketData} isLoading={marketLoading && !marketError} />
-          <WinnersLosers movers={movers} isLoading={moversLoading && !moversError} />
-          <AffiliateLinks />
-          <NewsSection />
-        </div>
-      </main>
-      <Footer />
-    </div>
+    <>
+      <SEOHead />
+      <div className="min-h-screen bg-background flex flex-col">
+        <Header />
+        <main className="flex-grow">
+          <div className="container mx-auto px-4 py-8 space-y-8">
+            <DailyReport report={report} isLoading={reportLoading && !reportError} />
+            <MarketOverview marketData={marketData} isLoading={marketLoading && !marketError} />
+            <PriceChart />
+            <WinnersLosers movers={movers} isLoading={moversLoading && !moversError} />
+            <AffiliateLinks />
+            <NewsSection />
+          </div>
+        </main>
+        <Footer />
+      </div>
+    </>
   );
 };
 

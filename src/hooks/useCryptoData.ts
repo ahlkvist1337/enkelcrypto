@@ -88,9 +88,9 @@ export const useMarketMovers = () => {
   });
 };
 
-export const useReports = (type?: 'daily' | 'weekly', limit?: number) => {
+export const useReports = (type?: 'daily' | 'weekly', limit?: number, offset?: number) => {
   return useQuery({
-    queryKey: ['reports', type, limit],
+    queryKey: ['reports', type, limit, offset],
     queryFn: async () => {
       const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error('Request timeout')), 15000)
@@ -99,7 +99,7 @@ export const useReports = (type?: 'daily' | 'weekly', limit?: number) => {
       const queryPromise = (async () => {
         let query = supabase
           .from('reports')
-          .select('*')
+          .select('*', { count: 'exact' })
           .order('date', { ascending: false });
         
         if (type) {
@@ -110,13 +110,17 @@ export const useReports = (type?: 'daily' | 'weekly', limit?: number) => {
           query = query.limit(limit);
         }
         
-        const { data, error } = await query;
+        if (offset) {
+          query = query.range(offset, offset + (limit || 10) - 1);
+        }
+        
+        const { data, error, count } = await query;
         
         if (error) throw error;
-        return data as Report[];
+        return { reports: data as Report[], totalCount: count || 0 };
       })();
 
-      return Promise.race([queryPromise, timeoutPromise]) as Promise<Report[]>;
+      return Promise.race([queryPromise, timeoutPromise]) as Promise<{ reports: Report[], totalCount: number }>;
     },
     retry: 2,
     staleTime: 5 * 60 * 1000,

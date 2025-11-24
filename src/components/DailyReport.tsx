@@ -1,6 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ShareButtons } from "@/components/ShareButtons";
 import { Report } from "@/hooks/useCryptoData";
 
 interface DailyReportProps {
@@ -66,17 +67,20 @@ export const DailyReport = ({ report, isLoading }: DailyReportProps) => {
   return (
     <Card className="p-6 md:p-8">
       <div className="space-y-4">
-        <div className="flex items-center space-x-2">
-          <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
-            Ny rapport
-          </Badge>
-          <span className="text-sm text-muted-foreground">
-            {new Date(report.date).toLocaleDateString("sv-SE", {
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-            })}
-          </span>
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div className="flex items-center space-x-2">
+            <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
+              Ny rapport
+            </Badge>
+            <span className="text-sm text-muted-foreground">
+              {new Date(report.date).toLocaleDateString("sv-SE", {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              })}
+            </span>
+          </div>
+          <ShareButtons title={report.title} />
         </div>
         
         <h1 className="text-3xl md:text-4xl font-bold text-foreground">
