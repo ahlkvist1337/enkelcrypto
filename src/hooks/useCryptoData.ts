@@ -24,18 +24,28 @@ export const useTodaysReport = () => {
   return useQuery({
     queryKey: ['todays-report'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('reports')
-        .select('*')
-        .eq('type', 'daily')
-        .order('date', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      
-      if (error) throw error;
-      return data as Report | null;
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Request timeout')), 10000)
+      );
+
+      const queryPromise = (async () => {
+        const { data, error } = await supabase
+          .from('reports')
+          .select('*')
+          .eq('type', 'daily')
+          .order('date', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        
+        if (error) throw error;
+        return data as Report | null;
+      })();
+
+      return Promise.race([queryPromise, timeoutPromise]) as Promise<Report | null>;
     },
-    retry: 1,
+    retry: 2,
+    staleTime: 2 * 60 * 1000,
+    gcTime: 5 * 60 * 1000,
   });
 };
 
@@ -43,28 +53,38 @@ export const useMarketMovers = () => {
   return useQuery({
     queryKey: ['market-movers'],
     queryFn: async () => {
-      // Get the latest available date from market_movers
-      const { data: latestData, error: latestError } = await supabase
-        .from('market_movers')
-        .select('date')
-        .order('date', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      
-      if (latestError) throw latestError;
-      if (!latestData) return [];
-      
-      // Fetch all movers for the latest date
-      const { data, error } = await supabase
-        .from('market_movers')
-        .select('*')
-        .eq('date', latestData.date)
-        .order('price_change', { ascending: false });
-      
-      if (error) throw error;
-      return data as MarketMover[];
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Request timeout')), 10000)
+      );
+
+      const queryPromise = (async () => {
+        // Get the latest available date from market_movers
+        const { data: latestData, error: latestError } = await supabase
+          .from('market_movers')
+          .select('date')
+          .order('date', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        
+        if (latestError) throw latestError;
+        if (!latestData) return [];
+        
+        // Fetch all movers for the latest date
+        const { data, error } = await supabase
+          .from('market_movers')
+          .select('*')
+          .eq('date', latestData.date)
+          .order('price_change', { ascending: false });
+        
+        if (error) throw error;
+        return data as MarketMover[];
+      })();
+
+      return Promise.race([queryPromise, timeoutPromise]) as Promise<MarketMover[]>;
     },
-    retry: 1,
+    retry: 2,
+    staleTime: 2 * 60 * 1000,
+    gcTime: 5 * 60 * 1000,
   });
 };
 

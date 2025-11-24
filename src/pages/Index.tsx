@@ -8,18 +8,18 @@ import { AffiliateLinks } from "@/components/AffiliateLinks";
 import { useTodaysReport, useMarketMovers, useCryptoMarketData } from "@/hooks/useCryptoData";
 
 const Index = () => {
-  const { data: report, isLoading: reportLoading } = useTodaysReport();
-  const { data: movers, isLoading: moversLoading } = useMarketMovers();
-  const { data: marketData, isLoading: marketLoading } = useCryptoMarketData();
+  const { data: report, isLoading: reportLoading, isError: reportError } = useTodaysReport();
+  const { data: movers, isLoading: moversLoading, isError: moversError } = useMarketMovers();
+  const { data: marketData, isLoading: marketLoading, isError: marketError } = useCryptoMarketData();
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Header />
       <main className="flex-grow">
         <div className="container mx-auto px-4 py-8 space-y-8">
-          <DailyReport report={report} isLoading={reportLoading} />
-          <MarketOverview marketData={marketData} isLoading={marketLoading} />
-          <WinnersLosers movers={movers} isLoading={moversLoading} />
+          <DailyReport report={report} isLoading={reportLoading && !reportError} />
+          <MarketOverview marketData={marketData} isLoading={marketLoading && !marketError} />
+          <WinnersLosers movers={movers} isLoading={moversLoading && !moversError} />
           <AffiliateLinks />
           <NewsSection />
         </div>
