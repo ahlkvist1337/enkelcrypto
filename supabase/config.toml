@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.fix-news-json]
 verify_jwt = false
+
+[functions.fetch-price-history]
+verify_jwt = false
