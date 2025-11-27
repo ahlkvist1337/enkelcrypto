@@ -392,8 +392,25 @@ export default function Admin() {
 
         <Card className="p-6">
           <h2 className="text-2xl font-bold text-foreground mb-4">Generera Rapporter</h2>
-          <p className="text-muted-foreground mb-6">
-            Rapporter genereras automatiskt: Dagligen kl 18:00 och veckovis på söndagar kl 18:00. Du kan också generera dem manuellt här.
+          <div className="mb-6 p-4 bg-muted/50 rounded-lg">
+            <h3 className="font-semibold text-foreground mb-3">Automatiska Genereringsscheman</h3>
+            <div className="space-y-2 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2">
+                <span className="font-medium text-foreground">📊 Daglig Rapport:</span>
+                <span>Varje dag kl 18:00 (svensk tid)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="font-medium text-foreground">📈 Veckorapport:</span>
+                <span>Varje söndag kl 18:00 (svensk tid)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="font-medium text-foreground">📰 Nyheter:</span>
+                <span>Varannan timme (hela dygnet)</span>
+              </div>
+            </div>
+          </div>
+          <p className="text-muted-foreground mb-4">
+            Du kan också generera rapporter och uppdatera nyheter manuellt:
           </p>
           <div className="flex flex-wrap gap-4">
             <Button onClick={generateReport} disabled={generating}>
