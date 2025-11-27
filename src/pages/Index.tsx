@@ -7,6 +7,7 @@ import { NewsSection } from "@/components/NewsSection";
 import { AffiliateLinks } from "@/components/AffiliateLinks";
 import { PriceChart } from "@/components/PriceChart";
 import { SEOHead } from "@/components/SEOHead";
+import { OfflineIndicator } from "@/components/OfflineIndicator";
 import { useTodaysReport, useMarketMovers, useCryptoMarketData } from "@/hooks/useCryptoData";
 
 const Index = () => {
@@ -30,6 +31,7 @@ const Index = () => {
           </div>
         </main>
         <Footer />
+        <OfflineIndicator />
       </div>
     </>
   );
