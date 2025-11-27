@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Rensa Cache</title>
+  <meta charset="UTF-8">
+</head>
+<body>
+  <h1>Rensar cache...</h1>
+  <script>
+    // Unregister all service workers
+    navigator.serviceWorker.getRegistrations().then(registrations => {
+      for (let registration of registrations) {
+        registration.unregister();
+      }
+    });
+
+    // Clear all caches
+    caches.keys().then(names => {
+      for (let name of names) {
+        caches.delete(name);
+      }
+    });
+
+    setTimeout(() => {
+      alert('Cache rensad! Laddar om sidan...');
+      window.location.href = '/';
+    }, 1000);
+  </script>
+</body>
+</html>
