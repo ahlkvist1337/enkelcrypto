@@ -163,7 +163,7 @@ const Archive = () => {
                           day: "numeric",
                         })}
                       </DialogDescription>
-                      {selectedReport && <ShareButtons title={selectedReport.title} />}
+                      {selectedReport && <ShareButtons title={selectedReport.title} url={`https://enkelcrypto.se/rapport/daily/${selectedReport.date}`} />}
                     </div>
                   </div>
                 </DialogHeader>

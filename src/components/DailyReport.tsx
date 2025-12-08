@@ -80,7 +80,7 @@ export const DailyReport = ({ report, isLoading }: DailyReportProps) => {
               })}
             </span>
           </div>
-          <ShareButtons title={report.title} />
+          <ShareButtons title={report.title} url={`https://enkelcrypto.se/rapport/daily/${report.date}`} />
         </div>
         
         <h1 className="text-3xl md:text-4xl font-bold text-foreground">

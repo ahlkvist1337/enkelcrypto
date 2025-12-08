@@ -84,7 +84,7 @@ const WeeklyReports = () => {
                               })}
                             </span>
                           </div>
-                          <ShareButtons title={report.title} />
+                          <ShareButtons title={report.title} url={`https://enkelcrypto.se/rapport/weekly/${report.date}`} />
                         </div>
                         <h2 className="text-2xl md:text-3xl font-bold text-foreground">
                           {report.title}
