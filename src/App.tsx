@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import About from "./pages/About";
 import Archive from "./pages/Archive";
 import WeeklyReports from "./pages/WeeklyReports";
+import ReportDetail from "./pages/ReportDetail";
 import Admin from "./pages/Admin";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
@@ -29,6 +30,7 @@ const App = () => (
               <Route path="/om" element={<About />} />
               <Route path="/arkiv" element={<Archive />} />
               <Route path="/veckorapporter" element={<WeeklyReports />} />
+              <Route path="/rapport/:type/:date" element={<ReportDetail />} />
               <Route path="/auth" element={<Auth />} />
               <Route
                 path="/admin"
