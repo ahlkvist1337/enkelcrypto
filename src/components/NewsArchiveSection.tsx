@@ -180,9 +180,11 @@ export const NewsArchiveSection = () => {
             </div>
           </DialogHeader>
           <div className="mt-4 prose prose-gray dark:prose-invert max-w-none">
-            <p className="text-foreground leading-relaxed whitespace-pre-wrap">
-              {selectedNews?.full_content || selectedNews?.summary}
-            </p>
+            {(selectedNews?.full_content || selectedNews?.summary)?.split('\n\n').map((paragraph, index) => (
+              <p key={index} className="text-foreground leading-relaxed mb-4">
+                {paragraph}
+              </p>
+            ))}
           </div>
         </DialogContent>
       </Dialog>

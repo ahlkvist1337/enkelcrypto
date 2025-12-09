@@ -121,9 +121,11 @@ export const NewsSection = () => {
             </p>
             
             <div className="prose prose-slate max-w-none">
-              <p className="text-foreground/90 leading-relaxed whitespace-pre-wrap">
-                {selectedNews?.summary}
-              </p>
+              {(selectedNews?.full_content || selectedNews?.summary)?.split('\n\n').map((paragraph, index) => (
+                <p key={index} className="text-foreground/90 leading-relaxed mb-4">
+                  {paragraph}
+                </p>
+              ))}
             </div>
             
             {selectedNews?.source_url && (
@@ -134,7 +136,7 @@ export const NewsSection = () => {
                 className="inline-flex items-center gap-2 text-primary hover:underline text-sm"
               >
                 <ExternalLink className="w-4 h-4" />
-                Läs hela artikeln (engelska)
+                Läs originalkällan
               </a>
             )}
           </div>

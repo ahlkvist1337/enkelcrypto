@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.fetch-price-history]
 verify_jwt = false
+
+[functions.update-news-translations]
+verify_jwt = false

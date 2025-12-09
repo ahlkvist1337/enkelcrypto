@@ -82,7 +82,7 @@ serve(async (req) => {
     
     for (const article of topArticles) {
       try {
-        // Generate a concise summary using AI
+        // Generate Swedish title, short summary, and full content using AI
         const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
           method: 'POST',
           headers: {
@@ -94,11 +94,18 @@ serve(async (req) => {
             messages: [
               {
                 role: 'system',
-                content: 'Du är en nyhetsredaktör som översätter och sammanfattar krypto-nyheter till svenska. Svara endast med JSON i formatet: {"title": "svensk titel", "summary": "2-3 meningar sammanfattning"}. Ingen extra text.'
+                content: `Du är en professionell nyhetsredaktör som skriver om krypto-nyheter på svenska. 
+
+Svara ENDAST med JSON i exakt detta format (ingen annan text):
+{
+  "title": "En fängslande svensk rubrik",
+  "summary": "En kort sammanfattning på 2-3 meningar för nyhetslistor.",
+  "full_content": "En fullständig artikel på svenska med 3-5 stycken (200-400 ord). Förklara bakgrunden, vad som hänt, varför det är viktigt och vad det kan betyda för marknaden. Separera stycken med dubbla radbrytningar."
+}`
               },
               {
                 role: 'user',
-                content: `Översätt titeln och sammanfatta denna nyhet på svenska:\n\nTitel: ${article.title}\n\nInnehåll: ${article.body}`
+                content: `Skriv om denna krypto-nyhet till en fullständig svensk artikel:\n\nOriginal titel: ${article.title}\n\nOriginal innehåll: ${article.body}`
               }
             ],
           }),
@@ -114,16 +121,20 @@ serve(async (req) => {
         
         // Parse JSON response and remove markdown formatting if present
         let swedishTitle = article.title;
-        let summary = aiContent;
+        let summary = '';
+        let fullContent = '';
         
         try {
           // Remove markdown code blocks if present (```json and ```)
           let cleanContent = aiContent.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
           const parsed = JSON.parse(cleanContent);
           swedishTitle = parsed.title || article.title;
-          summary = parsed.summary || aiContent;
+          summary = parsed.summary || '';
+          fullContent = parsed.full_content || '';
         } catch (e) {
-          console.log('Failed to parse AI JSON, using raw content as summary');
+          console.log('Failed to parse AI JSON, using raw content');
+          summary = aiContent;
+          fullContent = aiContent;
         }
         
         // Save to database (upsert to avoid duplicates)
@@ -132,7 +143,7 @@ serve(async (req) => {
           .upsert({
             title: swedishTitle,
             summary: summary,
-            full_content: article.body,
+            full_content: fullContent,
             source_url: article.url || article.guid,
             image_url: article.imageurl || null,
             date: today
@@ -144,11 +155,11 @@ serve(async (req) => {
         if (insertError) {
           console.error('Error inserting news:', insertError);
         } else {
-          console.log(`Saved article: ${article.title}`);
+          console.log(`Saved article: ${swedishTitle}`);
         }
         
         // Add delay to avoid rate limiting
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 1000));
       } catch (error) {
         console.error('Error processing article:', error);
       }
