@@ -122,9 +122,11 @@ const NewsDetail = () => {
                     </h1>
                     
                     <div className="prose prose-gray dark:prose-invert max-w-none">
-                      <p className="text-foreground leading-relaxed whitespace-pre-wrap">
-                        {news.full_content || news.summary}
-                      </p>
+                      {(news.full_content || news.summary).split('\n\n').map((paragraph, index) => (
+                        <p key={index} className="text-foreground leading-relaxed mb-4">
+                          {paragraph}
+                        </p>
+                      ))}
                     </div>
                   </article>
                 </Card>
