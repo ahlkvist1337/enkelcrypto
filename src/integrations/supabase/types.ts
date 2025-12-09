@@ -77,6 +77,39 @@ export type Database = {
         }
         Relationships: []
       }
+      migration_progress: {
+        Row: {
+          created_at: string
+          current_offset: number
+          id: string
+          is_complete: boolean
+          last_run_at: string | null
+          migration_name: string
+          total_count: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          current_offset?: number
+          id?: string
+          is_complete?: boolean
+          last_run_at?: string | null
+          migration_name: string
+          total_count?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          current_offset?: number
+          id?: string
+          is_complete?: boolean
+          last_run_at?: string | null
+          migration_name?: string
+          total_count?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       news: {
         Row: {
           created_at: string

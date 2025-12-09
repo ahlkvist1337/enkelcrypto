@@ -41,13 +41,33 @@ serve(async (req) => {
       }
     }
     
-    // Get parameters from request
-    const { batchSize = 5, offset = 0 } = await req.json().catch(() => ({}));
+    // Get parameters from request (ignore offset from request, use DB progress)
+    const { batchSize = 10 } = await req.json().catch(() => ({}));
     
-    console.log(`Starting news translation update. Batch size: ${batchSize}, Offset: ${offset}`);
+    // Get current progress from database
+    const { data: progressData } = await supabase
+      .from('migration_progress')
+      .select('*')
+      .eq('migration_name', 'news_translations')
+      .single();
     
-    // Get total count of news that need updating
-    // We'll update news where full_content is null, empty, or appears to be English
+    // Check if migration is complete
+    if (progressData?.is_complete) {
+      console.log('Migration already complete!');
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: 'Migration already complete',
+          isComplete: true
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    const currentOffset = progressData?.current_offset || 0;
+    console.log(`Starting news translation update. Batch size: ${batchSize}, Offset: ${currentOffset}`);
+    
+    // Get total count of news
     const { count: totalCount } = await supabase
       .from('news')
       .select('*', { count: 'exact', head: true });
@@ -59,20 +79,27 @@ serve(async (req) => {
       .from('news')
       .select('id, title, summary, full_content, source_url')
       .order('date', { ascending: false })
-      .range(offset, offset + batchSize - 1);
+      .range(currentOffset, currentOffset + batchSize - 1);
     
     if (fetchError) {
       throw new Error(`Failed to fetch news: ${fetchError.message}`);
     }
     
     if (!newsToUpdate || newsToUpdate.length === 0) {
+      // Mark migration as complete
+      await supabase
+        .from('migration_progress')
+        .update({ is_complete: true, last_run_at: new Date().toISOString() })
+        .eq('migration_name', 'news_translations');
+      
       return new Response(
         JSON.stringify({ 
           success: true, 
-          message: 'No more news to update',
+          message: 'Migration complete! No more news to update.',
           processed: 0,
-          totalProcessed: offset,
-          totalCount
+          totalProcessed: currentOffset,
+          totalCount,
+          isComplete: true
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -181,8 +208,19 @@ Svara ENDAST med JSON i exakt detta format (ingen annan text):
       }
     }
     
-    const nextOffset = offset + batchSize;
+    const nextOffset = currentOffset + batchSize;
     const hasMore = nextOffset < (totalCount || 0);
+    
+    // Update progress in database
+    await supabase
+      .from('migration_progress')
+      .update({ 
+        current_offset: nextOffset, 
+        total_count: totalCount,
+        last_run_at: new Date().toISOString(),
+        is_complete: !hasMore
+      })
+      .eq('migration_name', 'news_translations');
     
     return new Response(
       JSON.stringify({ 
