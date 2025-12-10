@@ -74,8 +74,8 @@ serve(async (req) => {
     
     console.log(`Filtered to ${recentArticles.length} articles from last 24 hours`);
     
-    // Take 5-10 most recent articles
-    const topArticles = recentArticles.slice(0, 10);
+    // Take 5 most recent articles (4 runs/day = ~20 articles/day)
+    const topArticles = recentArticles.slice(0, 5);
     
     // Generate AI summaries for each article
     const today = new Date().toISOString().split('T')[0];
