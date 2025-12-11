@@ -80,6 +80,8 @@ serve(async (req) => {
     // Generate AI summaries for each article
     const today = new Date().toISOString().split('T')[0];
     
+    let savedCount = 0;
+    
     for (const article of topArticles) {
       try {
         // Generate Swedish title, short summary, and full content using AI
@@ -94,14 +96,12 @@ serve(async (req) => {
             messages: [
               {
                 role: 'system',
-                content: `Du är en professionell nyhetsredaktör som skriver om krypto-nyheter på svenska. 
+                content: `Du är en professionell nyhetsredaktör som skriver om krypto-nyheter på svenska.
 
-Svara ENDAST med JSON i exakt detta format (ingen annan text):
-{
-  "title": "En fängslande svensk rubrik",
-  "summary": "En kort sammanfattning på 2-3 meningar för nyhetslistor.",
-  "full_content": "En fullständig artikel på svenska med 3-5 stycken (200-400 ord). Förklara bakgrunden, vad som hänt, varför det är viktigt och vad det kan betyda för marknaden. Separera stycken med dubbla radbrytningar."
-}`
+VIKTIGT: Svara med REN JSON utan markdown-formatering. Ingen \`\`\`json eller \`\`\` wrapper.
+
+Returnera exakt detta JSON-format:
+{"title": "Svensk rubrik här", "summary": "Kort sammanfattning på 2-3 meningar.", "full_content": "Fullständig artikel på svenska med 3-5 stycken (200-400 ord). Separera stycken med dubbla radbrytningar."}`
               },
               {
                 role: 'user',
@@ -119,22 +119,44 @@ Svara ENDAST med JSON i exakt detta format (ingen annan text):
         const aiData = await aiResponse.json();
         const aiContent = aiData.choices[0].message.content;
         
-        // Parse JSON response and remove markdown formatting if present
-        let swedishTitle = article.title;
+        // Parse JSON response with robust cleaning
+        let swedishTitle = '';
         let summary = '';
         let fullContent = '';
         
         try {
-          // Remove markdown code blocks if present (```json and ```)
-          let cleanContent = aiContent.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+          // Remove any markdown code blocks (various formats)
+          let cleanContent = aiContent
+            .replace(/^```(?:json|JSON)?\s*\n?/gm, '')
+            .replace(/\n?```\s*$/gm, '')
+            .replace(/^`+|`+$/g, '')
+            .trim();
+          
           const parsed = JSON.parse(cleanContent);
-          swedishTitle = parsed.title || article.title;
+          swedishTitle = parsed.title || '';
           summary = parsed.summary || '';
           fullContent = parsed.full_content || '';
         } catch (e) {
-          console.log('Failed to parse AI JSON, using raw content');
-          summary = aiContent;
-          fullContent = aiContent;
+          console.error(`Failed to parse AI JSON for article: ${article.title}`);
+          console.error('Raw AI response:', aiContent.substring(0, 200));
+          // Skip this article instead of saving corrupt data
+          continue;
+        }
+        
+        // Validation: Ensure we have valid Swedish content
+        if (!swedishTitle || swedishTitle === article.title) {
+          console.error(`Skipping article - title is empty or still English: ${article.title}`);
+          continue;
+        }
+        
+        if (!summary || summary.includes('```') || summary.length < 20) {
+          console.error(`Skipping article - invalid summary for: ${swedishTitle}`);
+          continue;
+        }
+        
+        if (!fullContent || fullContent.includes('```') || fullContent.length < 100) {
+          console.error(`Skipping article - invalid full_content for: ${swedishTitle}`);
+          continue;
         }
         
         // Save to database (upsert to avoid duplicates)
@@ -156,6 +178,7 @@ Svara ENDAST med JSON i exakt detta format (ingen annan text):
           console.error('Error inserting news:', insertError);
         } else {
           console.log(`Saved article: ${swedishTitle}`);
+          savedCount++;
         }
         
         // Add delay to avoid rate limiting
@@ -164,6 +187,8 @@ Svara ENDAST med JSON i exakt detta format (ingen annan text):
         console.error('Error processing article:', error);
       }
     }
+    
+    console.log(`Successfully saved ${savedCount} of ${topArticles.length} articles`);
     
     // Clean up old news (keep last 30 days)
     const thirtyDaysAgo = new Date();
@@ -181,7 +206,8 @@ Svara ENDAST med JSON i exakt detta format (ingen annan text):
       JSON.stringify({ 
         success: true, 
         articlesProcessed: topArticles.length,
-        message: 'News scraping completed successfully' 
+        articlesSaved: savedCount,
+        message: `News scraping completed - saved ${savedCount} of ${topArticles.length} articles` 
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
