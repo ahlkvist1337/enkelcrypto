@@ -15,7 +15,7 @@ export default defineConfig(({ mode }) => ({
     mode === "development" && componentTagger(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["favicon.png"],
+      includeAssets: ["favicon.svg"],
       manifest: {
         name: "EnkelCrypto",
         short_name: "EnkelCrypto",
@@ -23,9 +23,9 @@ export default defineConfig(({ mode }) => ({
         theme_color: "#8B5CF6",
         icons: [
           {
-            src: "/favicon.png",
-            sizes: "192x192",
-            type: "image/png"
+            src: "/favicon.svg",
+            sizes: "any",
+            type: "image/svg+xml"
           }
         ]
       },
