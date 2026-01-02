@@ -143,6 +143,42 @@ export type Database = {
         }
         Relationships: []
       }
+      news_scrape_log: {
+        Row: {
+          articles_fetched: number | null
+          articles_saved: number | null
+          attempt_number: number
+          completed_at: string | null
+          date: string
+          error_message: string | null
+          id: string
+          started_at: string
+          status: string
+        }
+        Insert: {
+          articles_fetched?: number | null
+          articles_saved?: number | null
+          attempt_number?: number
+          completed_at?: string | null
+          date?: string
+          error_message?: string | null
+          id?: string
+          started_at?: string
+          status: string
+        }
+        Update: {
+          articles_fetched?: number | null
+          articles_saved?: number | null
+          attempt_number?: number
+          completed_at?: string | null
+          date?: string
+          error_message?: string | null
+          id?: string
+          started_at?: string
+          status?: string
+        }
+        Relationships: []
+      }
       report_generation_log: {
         Row: {
           attempt_number: number
