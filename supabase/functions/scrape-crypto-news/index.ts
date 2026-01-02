@@ -6,86 +6,126 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
+// Get Swedish date in YYYY-MM-DD format
+function getSwedishDate(): string {
+  return new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Stockholm' });
+}
 
+// Log scrape attempt to database
+async function logScrapeAttempt(
+  supabase: any,
+  status: 'started' | 'completed' | 'failed',
+  articlesFetched: number = 0,
+  articlesSaved: number = 0,
+  errorMessage: string | null = null,
+  attemptNumber: number = 1
+) {
+  const today = getSwedishDate();
+  
+  if (status === 'started') {
+    const { error } = await supabase
+      .from('news_scrape_log')
+      .insert({
+        date: today,
+        status,
+        attempt_number: attemptNumber,
+        articles_fetched: 0,
+        articles_saved: 0
+      });
+    if (error) console.error('Failed to log scrape start:', error);
+  } else {
+    // Update the latest started log for today
+    const { error } = await supabase
+      .from('news_scrape_log')
+      .update({
+        status,
+        completed_at: new Date().toISOString(),
+        articles_fetched: articlesFetched,
+        articles_saved: articlesSaved,
+        error_message: errorMessage
+      })
+      .eq('date', today)
+      .eq('status', 'started')
+      .order('started_at', { ascending: false })
+      .limit(1);
+    if (error) console.error('Failed to log scrape completion:', error);
+  }
+}
+
+// Get attempt number for today
+async function getAttemptNumber(supabase: any): Promise<number> {
+  const today = getSwedishDate();
+  const { data, error } = await supabase
+    .from('news_scrape_log')
+    .select('attempt_number')
+    .eq('date', today)
+    .order('attempt_number', { ascending: false })
+    .limit(1);
+  
+  if (error || !data || data.length === 0) return 1;
+  return data[0].attempt_number + 1;
+}
+
+// Check if we should retry based on last attempt
+async function shouldRetry(supabase: any): Promise<boolean> {
+  const today = getSwedishDate();
+  const { data, error } = await supabase
+    .from('news_scrape_log')
+    .select('status, attempt_number')
+    .eq('date', today)
+    .order('started_at', { ascending: false })
+    .limit(1);
+  
+  if (error || !data || data.length === 0) return true;
+  
+  // Retry if last attempt failed and we haven't exceeded max attempts
+  const lastAttempt = data[0];
+  if (lastAttempt.status === 'failed' && lastAttempt.attempt_number < 3) {
+    return true;
+  }
+  
+  // Don't retry if last attempt was successful
+  if (lastAttempt.status === 'completed') {
+    return false;
+  }
+  
+  return true;
+}
+
+// Fetch with timeout
+async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs: number = 30000): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY')!;
-    
-    const supabase = createClient(supabaseUrl, supabaseKey);
-    
-    // Check if request is from an authenticated admin (optional for cron jobs)
-    const authHeader = req.headers.get('Authorization');
-    if (authHeader) {
-      const token = authHeader.replace('Bearer ', '');
-      const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+    return response;
+  } catch (error: unknown) {
+    clearTimeout(timeoutId);
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error(`Request timed out after ${timeoutMs}ms`);
+    }
+    throw error;
+  }
+}
+
+// AI call with retry logic
+async function callAIWithRetry(
+  lovableApiKey: string,
+  article: any,
+  maxRetries: number = 2
+): Promise<{ title: string; summary: string; fullContent: string } | null> {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`AI call attempt ${attempt}/${maxRetries} for article: ${article.title.substring(0, 50)}...`);
       
-      if (!authError && user) {
-        // Check if user is admin
-        const { data: roleData } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', user.id)
-          .eq('role', 'admin')
-          .single();
-        
-        if (!roleData) {
-          return new Response(
-            JSON.stringify({ error: 'Forbidden - Admin access required' }),
-            { 
-              status: 403,
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-            }
-          );
-        }
-      }
-    }
-    
-    console.log('Starting crypto news scraping...');
-    
-    // Fetch news from CryptoCompare Free API (no API key needed)
-    const newsResponse = await fetch(
-      'https://min-api.cryptocompare.com/data/v2/news/?lang=EN&sortOrder=latest',
-      {
-        headers: {
-          'Accept': 'application/json'
-        }
-      }
-    );
-    
-    if (!newsResponse.ok) {
-      throw new Error(`CryptoCompare API error: ${newsResponse.status}`);
-    }
-    
-    const newsData = await newsResponse.json();
-    const allArticles = newsData.Data || [];
-    
-    console.log(`Found ${allArticles.length} articles from CryptoCompare`);
-    
-    // Filter articles from last 24 hours
-    const twentyFourHoursAgo = Date.now() / 1000 - (24 * 60 * 60);
-    const recentArticles = allArticles.filter((article: any) => 
-      article.published_on >= twentyFourHoursAgo
-    );
-    
-    console.log(`Filtered to ${recentArticles.length} articles from last 24 hours`);
-    
-    // Take 5 most recent articles (4 runs/day = ~20 articles/day)
-    const topArticles = recentArticles.slice(0, 5);
-    
-    // Generate AI summaries for each article
-    const today = new Date().toISOString().split('T')[0];
-    
-    let savedCount = 0;
-    
-    for (const article of topArticles) {
-      try {
-        // Generate Swedish title, short summary, and full content using AI
-        const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      const aiResponse = await fetchWithTimeout(
+        'https://ai.gateway.lovable.dev/v1/chat/completions',
+        {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${lovableApiKey}`,
@@ -109,41 +149,161 @@ Returnera exakt detta JSON-format:
               }
             ],
           }),
-        });
+        },
+        30000 // 30 second timeout
+      );
 
-        if (!aiResponse.ok) {
-          console.error('AI API error:', aiResponse.status);
+      if (!aiResponse.ok) {
+        const errorText = await aiResponse.text();
+        console.error(`AI API error (attempt ${attempt}): ${aiResponse.status} - ${errorText}`);
+        if (attempt === maxRetries) return null;
+        await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2s before retry
+        continue;
+      }
+
+      const aiData = await aiResponse.json();
+      const aiContent = aiData.choices[0].message.content;
+      
+      // Parse JSON response with robust cleaning
+      let cleanContent = aiContent
+        .replace(/^```(?:json|JSON)?\s*\n?/gm, '')
+        .replace(/\n?```\s*$/gm, '')
+        .replace(/^`+|`+$/g, '')
+        .trim();
+      
+      const parsed = JSON.parse(cleanContent);
+      
+      if (!parsed.title || !parsed.summary || !parsed.full_content) {
+        console.error(`Invalid AI response structure (attempt ${attempt})`);
+        if (attempt === maxRetries) return null;
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        continue;
+      }
+      
+      return {
+        title: parsed.title,
+        summary: parsed.summary,
+        fullContent: parsed.full_content
+      };
+    } catch (error) {
+      console.error(`AI call failed (attempt ${attempt}):`, error);
+      if (attempt === maxRetries) return null;
+      await new Promise(resolve => setTimeout(resolve, 2000));
+    }
+  }
+  return null;
+}
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+  const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+  const lovableApiKey = Deno.env.get('LOVABLE_API_KEY')!;
+  
+  const supabase = createClient(supabaseUrl, supabaseKey);
+  
+  try {
+    // Check if request is from an authenticated admin (optional for cron jobs)
+    const authHeader = req.headers.get('Authorization');
+    if (authHeader) {
+      const token = authHeader.replace('Bearer ', '');
+      const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+      
+      if (!authError && user) {
+        const { data: roleData } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .eq('role', 'admin')
+          .single();
+        
+        if (!roleData) {
+          return new Response(
+            JSON.stringify({ error: 'Forbidden - Admin access required' }),
+            { 
+              status: 403,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            }
+          );
+        }
+      }
+    }
+    
+    // Check if we should run (based on retry logic)
+    const shouldRun = await shouldRetry(supabase);
+    if (!shouldRun) {
+      console.log('Skipping scrape - already completed successfully today');
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: 'Already completed successfully today, skipping' 
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200 
+        }
+      );
+    }
+    
+    const attemptNumber = await getAttemptNumber(supabase);
+    console.log(`Starting crypto news scraping (attempt ${attemptNumber})...`);
+    
+    // Log start
+    await logScrapeAttempt(supabase, 'started', 0, 0, null, attemptNumber);
+    
+    // Fetch news from CryptoCompare Free API
+    const newsResponse = await fetchWithTimeout(
+      'https://min-api.cryptocompare.com/data/v2/news/?lang=EN&sortOrder=latest',
+      {
+        headers: {
+          'Accept': 'application/json'
+        }
+      },
+      15000 // 15 second timeout
+    );
+    
+    if (!newsResponse.ok) {
+      throw new Error(`CryptoCompare API error: ${newsResponse.status}`);
+    }
+    
+    const newsData = await newsResponse.json();
+    const allArticles = newsData.Data || [];
+    
+    console.log(`Found ${allArticles.length} articles from CryptoCompare`);
+    
+    // Filter articles from last 24 hours
+    const twentyFourHoursAgo = Date.now() / 1000 - (24 * 60 * 60);
+    const recentArticles = allArticles.filter((article: any) => 
+      article.published_on >= twentyFourHoursAgo
+    );
+    
+    console.log(`Filtered to ${recentArticles.length} articles from last 24 hours`);
+    
+    // Take 5 most recent articles
+    const topArticles = recentArticles.slice(0, 5);
+    const today = getSwedishDate();
+    
+    let savedCount = 0;
+    let processedCount = 0;
+    
+    for (const article of topArticles) {
+      processedCount++;
+      
+      try {
+        // Generate Swedish content using AI with retry
+        const aiResult = await callAIWithRetry(lovableApiKey, article);
+        
+        if (!aiResult) {
+          console.error(`Skipping article after AI failures: ${article.title}`);
           continue;
         }
-
-        const aiData = await aiResponse.json();
-        const aiContent = aiData.choices[0].message.content;
         
-        // Parse JSON response with robust cleaning
-        let swedishTitle = '';
-        let summary = '';
-        let fullContent = '';
+        const { title: swedishTitle, summary, fullContent } = aiResult;
         
-        try {
-          // Remove any markdown code blocks (various formats)
-          let cleanContent = aiContent
-            .replace(/^```(?:json|JSON)?\s*\n?/gm, '')
-            .replace(/\n?```\s*$/gm, '')
-            .replace(/^`+|`+$/g, '')
-            .trim();
-          
-          const parsed = JSON.parse(cleanContent);
-          swedishTitle = parsed.title || '';
-          summary = parsed.summary || '';
-          fullContent = parsed.full_content || '';
-        } catch (e) {
-          console.error(`Failed to parse AI JSON for article: ${article.title}`);
-          console.error('Raw AI response:', aiContent.substring(0, 200));
-          // Skip this article instead of saving corrupt data
-          continue;
-        }
-        
-        // Validation: Ensure we have valid Swedish content
+        // Validation
         if (!swedishTitle || swedishTitle === article.title) {
           console.error(`Skipping article - title is empty or still English: ${article.title}`);
           continue;
@@ -159,7 +319,7 @@ Returnera exakt detta JSON-format:
           continue;
         }
         
-        // Save to database (upsert to avoid duplicates)
+        // Save to database
         const { error: insertError } = await supabase
           .from('news')
           .upsert({
@@ -177,18 +337,21 @@ Returnera exakt detta JSON-format:
         if (insertError) {
           console.error('Error inserting news:', insertError);
         } else {
-          console.log(`Saved article: ${swedishTitle}`);
+          console.log(`Saved article ${savedCount + 1}: ${swedishTitle.substring(0, 50)}...`);
           savedCount++;
         }
         
         // Add delay to avoid rate limiting
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 1500));
       } catch (error) {
         console.error('Error processing article:', error);
       }
     }
     
     console.log(`Successfully saved ${savedCount} of ${topArticles.length} articles`);
+    
+    // Log completion
+    await logScrapeAttempt(supabase, 'completed', topArticles.length, savedCount);
     
     // Clean up old news (keep last 30 days)
     const thirtyDaysAgo = new Date();
@@ -202,9 +365,18 @@ Returnera exakt detta JSON-format:
       console.error('Error cleaning old news:', deleteError);
     }
     
+    // Clean up old logs (keep last 14 days)
+    const fourteenDaysAgo = new Date();
+    fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
+    await supabase
+      .from('news_scrape_log')
+      .delete()
+      .lt('date', fourteenDaysAgo.toISOString().split('T')[0]);
+    
     return new Response(
       JSON.stringify({ 
         success: true, 
+        attemptNumber,
         articlesProcessed: topArticles.length,
         articlesSaved: savedCount,
         message: `News scraping completed - saved ${savedCount} of ${topArticles.length} articles` 
@@ -216,6 +388,16 @@ Returnera exakt detta JSON-format:
     );
   } catch (error) {
     console.error('Error in scrape-crypto-news function:', error);
+    
+    // Log failure
+    await logScrapeAttempt(
+      supabase, 
+      'failed', 
+      0, 
+      0, 
+      error instanceof Error ? error.message : 'Unknown error'
+    );
+    
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
       { 
@@ -225,4 +407,3 @@ Returnera exakt detta JSON-format:
     );
   }
 });
-
