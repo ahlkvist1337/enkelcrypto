@@ -6,51 +6,118 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
+// Helper to format date as YYYY-MM-DD in Swedish timezone
+function getSwedishDate(date: Date = new Date()): string {
+  return date.toLocaleDateString('sv-SE', { timeZone: 'Europe/Stockholm' }).split('T')[0];
+}
 
+// Helper to get yesterday's date in Swedish timezone
+function getYesterdaySwedishDate(): string {
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  return getSwedishDate(yesterday);
+}
+
+// Log generation attempt to database
+async function logGenerationAttempt(
+  supabase: any, 
+  date: string, 
+  status: 'started' | 'completed' | 'failed', 
+  attemptNumber: number,
+  errorMessage?: string,
+  durationMs?: number
+) {
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY')!;
-    
-    const supabase = createClient(supabaseUrl, supabaseKey);
-    
-    console.log('Starting daily report generation...');
-    
-    // Check if report already exists for today
-    const today = new Date().toISOString().split('T')[0];
+    await supabase.from('report_generation_log').insert({
+      date,
+      status,
+      attempt_number: attemptNumber,
+      error_message: errorMessage,
+      duration_ms: durationMs,
+    });
+  } catch (error) {
+    console.error('Failed to log generation attempt:', error);
+  }
+}
+
+// Get the current attempt number for a date
+async function getAttemptNumber(supabase: any, date: string): Promise<number> {
+  const { data } = await supabase
+    .from('report_generation_log')
+    .select('attempt_number')
+    .eq('date', date)
+    .order('attempt_number', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  
+  return data ? data.attempt_number + 1 : 1;
+}
+
+// Check if we should retry (max 3 attempts)
+async function shouldRetry(supabase: any, date: string): Promise<boolean> {
+  const attemptNumber = await getAttemptNumber(supabase, date);
+  return attemptNumber <= 3;
+}
+
+// Generate report for a specific date
+async function generateReportForDate(
+  supabase: any, 
+  supabaseUrl: string, 
+  supabaseKey: string, 
+  lovableApiKey: string, 
+  targetDate: string
+): Promise<{ success: boolean; message: string }> {
+  const startTime = Date.now();
+  const attemptNumber = await getAttemptNumber(supabase, targetDate);
+  
+  console.log(`Starting report generation for ${targetDate} (attempt ${attemptNumber})...`);
+  
+  // Check if we've exceeded max attempts
+  if (attemptNumber > 3) {
+    console.log(`Max attempts (3) exceeded for ${targetDate}, skipping`);
+    return { success: false, message: `Max attempts exceeded for ${targetDate}` };
+  }
+  
+  // Log start
+  await logGenerationAttempt(supabase, targetDate, 'started', attemptNumber);
+  
+  try {
+    // Check if report already exists
     const { data: existingReport } = await supabase
       .from('reports')
       .select('id')
       .eq('type', 'daily')
-      .eq('date', today)
+      .eq('date', targetDate)
       .maybeSingle();
     
     if (existingReport) {
-      console.log('Report already exists for today, skipping generation');
-      return new Response(
-        JSON.stringify({ message: 'Report already exists for today' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
-      );
+      console.log(`Report already exists for ${targetDate}, marking as completed`);
+      await logGenerationAttempt(supabase, targetDate, 'completed', attemptNumber, 'Report already existed', Date.now() - startTime);
+      return { success: true, message: `Report already exists for ${targetDate}` };
     }
     
-    // Fetch crypto data
+    // Fetch crypto data with timeout
+    console.log('Fetching crypto data...');
+    const cryptoController = new AbortController();
+    const cryptoTimeout = setTimeout(() => cryptoController.abort(), 30000);
+    
     const cryptoDataResponse = await fetch(`${supabaseUrl}/functions/v1/fetch-crypto-data`, {
       headers: { Authorization: `Bearer ${supabaseKey}` },
+      signal: cryptoController.signal,
     });
+    clearTimeout(cryptoTimeout);
     
     if (!cryptoDataResponse.ok) {
-      throw new Error('Failed to fetch crypto data');
+      throw new Error(`Failed to fetch crypto data: ${cryptoDataResponse.status}`);
     }
     
     const cryptoData = await cryptoDataResponse.json();
+    console.log('Crypto data fetched successfully');
     
     // Prepare data summary for AI
+    const displayDate = new Date(targetDate).toLocaleDateString('sv-SE');
     const dataSummary = `
-Marknadsöversikt ${new Date().toLocaleDateString('sv-SE')}:
+Marknadsöversikt ${displayDate}:
 
 Bitcoin: ${cryptoData.bitcoin.price.toLocaleString('sv-SE')} SEK (${cryptoData.bitcoin.change24h.toFixed(2)}% på 24h)
 Ethereum: ${cryptoData.ethereum.price.toLocaleString('sv-SE')} SEK (${cryptoData.ethereum.change24h.toFixed(2)}% på 24h)
@@ -64,8 +131,6 @@ Dagens förlorare (topp 5):
 ${cryptoData.losers.map((l: any, i: number) => `${i+1}. ${l.name} (${l.symbol}): ${l.priceChange.toFixed(2)}%`).join('\n')}
 `;
 
-    console.log('Generating AI report...');
-    
     // Fetch affiliate links to include in report
     const { data: affiliateLinks } = await supabase
       .from('affiliate_links')
@@ -74,10 +139,14 @@ ${cryptoData.losers.map((l: any, i: number) => `${i+1}. ${l.name} (${l.symbol}):
       .limit(3);
     
     const affiliateText = affiliateLinks && affiliateLinks.length > 0
-      ? `\n\nTillgängliga handelsplattformar:\n${affiliateLinks.map(link => `- ${link.name}: ${link.url}`).join('\n')}`
+      ? `\n\nTillgängliga handelsplattformar:\n${affiliateLinks.map((link: any) => `- ${link.name}: ${link.url}`).join('\n')}`
       : '';
     
-    // Generate report with AI
+    // Generate report with AI (with timeout)
+    console.log('Generating AI report...');
+    const aiController = new AbortController();
+    const aiTimeout = setTimeout(() => aiController.abort(), 60000); // 60 second timeout for AI
+    
     const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -115,119 +184,225 @@ VIKTIGT: Använd aldrig ord som "investera", "köp", "sälj" - använd istället
           }
         ],
       }),
+      signal: aiController.signal,
     });
+    clearTimeout(aiTimeout);
 
     if (!aiResponse.ok) {
       const errorText = await aiResponse.text();
       console.error('AI API error:', aiResponse.status, errorText);
-      throw new Error(`AI API error: ${aiResponse.status}`);
+      throw new Error(`AI API error: ${aiResponse.status} - ${errorText.substring(0, 200)}`);
     }
 
     const aiData = await aiResponse.json();
     const reportContent = aiData.choices[0].message.content;
     
-    console.log('Saving report to database...');
+    console.log('AI report generated, saving to database...');
     
     // Save report to database
     const { error: reportError } = await supabase
       .from('reports')
       .insert({
-        date: today,
+        date: targetDate,
         type: 'daily',
-        title: `Dagens kryptorapport – ${new Date().toLocaleDateString('sv-SE', { year: 'numeric', month: 'long', day: 'numeric' })}`,
+        title: `Dagens kryptorapport – ${new Date(targetDate).toLocaleDateString('sv-SE', { year: 'numeric', month: 'long', day: 'numeric' })}`,
         content: reportContent,
       });
     
     if (reportError) {
       console.error('Error saving report:', reportError);
-      throw reportError;
+      throw new Error(`Database error: ${reportError.message}`);
     }
     
-    // Generate AI comments for gainers and losers and save them
-    console.log('Saving market movers...');
+    console.log('Report saved, generating market mover comments...');
     
+    // Generate AI comments for gainers and losers
     for (const gainer of cryptoData.gainers) {
-      const commentResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${lovableApiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'google/gemini-2.5-flash',
-          messages: [
-            {
-              role: 'system',
-              content: 'Du skriver mycket korta (max 10 ord), neutrala kommentarer på svenska om varför ett kryptomynt har stigit. Använd ord som "troligen", "verkar", aldrig garantier.'
-            },
-            {
-              role: 'user',
-              content: `${gainer.name} har stigit ${gainer.priceChange.toFixed(2)}%. Skriv en mycket kort kommentar om möjlig orsak.`
-            }
-          ],
-        }),
-      });
-      
-      const commentData = await commentResponse.json();
-      const comment = commentData.choices[0].message.content;
-      
-      await supabase.from('market_movers').insert({
-        date: today,
-        coin_name: gainer.name,
-        ticker: gainer.symbol,
-        price_change: gainer.priceChange,
-        type: 'winner',
-        ai_comment: comment,
-      });
+      try {
+        const commentResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${lovableApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'google/gemini-2.5-flash',
+            messages: [
+              {
+                role: 'system',
+                content: 'Du skriver mycket korta (max 10 ord), neutrala kommentarer på svenska om varför ett kryptomynt har stigit. Använd ord som "troligen", "verkar", aldrig garantier.'
+              },
+              {
+                role: 'user',
+                content: `${gainer.name} har stigit ${gainer.priceChange.toFixed(2)}%. Skriv en mycket kort kommentar om möjlig orsak.`
+              }
+            ],
+          }),
+        });
+        
+        const commentData = await commentResponse.json();
+        const comment = commentData.choices?.[0]?.message?.content || 'Ökat marknadsintresse';
+        
+        await supabase.from('market_movers').insert({
+          date: targetDate,
+          coin_name: gainer.name,
+          ticker: gainer.symbol,
+          price_change: gainer.priceChange,
+          type: 'winner',
+          ai_comment: comment,
+        });
+      } catch (error) {
+        console.error(`Failed to generate comment for gainer ${gainer.name}:`, error);
+        // Still insert without AI comment
+        await supabase.from('market_movers').insert({
+          date: targetDate,
+          coin_name: gainer.name,
+          ticker: gainer.symbol,
+          price_change: gainer.priceChange,
+          type: 'winner',
+          ai_comment: 'Ökat marknadsintresse',
+        });
+      }
     }
     
     for (const loser of cryptoData.losers) {
-      const commentResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${lovableApiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'google/gemini-2.5-flash',
-          messages: [
-            {
-              role: 'system',
-              content: 'Du skriver mycket korta (max 10 ord), neutrala kommentarer på svenska om varför ett kryptomynt har fallit. Använd ord som "troligen", "verkar", aldrig garantier.'
-            },
-            {
-              role: 'user',
-              content: `${loser.name} har fallit ${loser.priceChange.toFixed(2)}%. Skriv en mycket kort kommentar om möjlig orsak.`
-            }
-          ],
-        }),
-      });
-      
-      const commentData = await commentResponse.json();
-      const comment = commentData.choices[0].message.content;
-      
-      await supabase.from('market_movers').insert({
-        date: today,
-        coin_name: loser.name,
-        ticker: loser.symbol,
-        price_change: loser.priceChange,
-        type: 'loser',
-        ai_comment: comment,
-      });
+      try {
+        const commentResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${lovableApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'google/gemini-2.5-flash',
+            messages: [
+              {
+                role: 'system',
+                content: 'Du skriver mycket korta (max 10 ord), neutrala kommentarer på svenska om varför ett kryptomynt har fallit. Använd ord som "troligen", "verkar", aldrig garantier.'
+              },
+              {
+                role: 'user',
+                content: `${loser.name} har fallit ${loser.priceChange.toFixed(2)}%. Skriv en mycket kort kommentar om möjlig orsak.`
+              }
+            ],
+          }),
+        });
+        
+        const commentData = await commentResponse.json();
+        const comment = commentData.choices?.[0]?.message?.content || 'Vinsttagning troligen';
+        
+        await supabase.from('market_movers').insert({
+          date: targetDate,
+          coin_name: loser.name,
+          ticker: loser.symbol,
+          price_change: loser.priceChange,
+          type: 'loser',
+          ai_comment: comment,
+        });
+      } catch (error) {
+        console.error(`Failed to generate comment for loser ${loser.name}:`, error);
+        // Still insert without AI comment
+        await supabase.from('market_movers').insert({
+          date: targetDate,
+          coin_name: loser.name,
+          ticker: loser.symbol,
+          price_change: loser.priceChange,
+          type: 'loser',
+          ai_comment: 'Vinsttagning troligen',
+        });
+      }
     }
     
-    console.log('Daily report generation complete!');
+    const duration = Date.now() - startTime;
+    console.log(`Report generation completed for ${targetDate} in ${duration}ms`);
+    
+    // Log success
+    await logGenerationAttempt(supabase, targetDate, 'completed', attemptNumber, undefined, duration);
+    
+    return { success: true, message: `Report generated successfully for ${targetDate}` };
+    
+  } catch (error) {
+    const duration = Date.now() - startTime;
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error(`Report generation failed for ${targetDate}:`, errorMessage);
+    
+    // Log failure
+    await logGenerationAttempt(supabase, targetDate, 'failed', attemptNumber, errorMessage, duration);
+    
+    return { success: false, message: errorMessage };
+  }
+}
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+  const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+  const lovableApiKey = Deno.env.get('LOVABLE_API_KEY')!;
+  
+  const supabase = createClient(supabaseUrl, supabaseKey);
+  
+  console.log('=== Daily Report Generation Started ===');
+  console.log('Current UTC time:', new Date().toISOString());
+  console.log('Swedish time:', new Date().toLocaleString('sv-SE', { timeZone: 'Europe/Stockholm' }));
+  
+  const results: { date: string; success: boolean; message: string }[] = [];
+  
+  try {
+    // Get today's date in Swedish timezone
+    const today = getSwedishDate();
+    const yesterday = getYesterdaySwedishDate();
+    
+    console.log('Today (Swedish):', today);
+    console.log('Yesterday (Swedish):', yesterday);
+    
+    // Check if yesterday's report is missing (backup mechanism)
+    const { data: yesterdayReport } = await supabase
+      .from('reports')
+      .select('id')
+      .eq('type', 'daily')
+      .eq('date', yesterday)
+      .maybeSingle();
+    
+    if (!yesterdayReport) {
+      console.log(`Yesterday's report (${yesterday}) is missing, attempting to generate...`);
+      const shouldTry = await shouldRetry(supabase, yesterday);
+      if (shouldTry) {
+        const result = await generateReportForDate(supabase, supabaseUrl, supabaseKey, lovableApiKey, yesterday);
+        results.push({ date: yesterday, ...result });
+      } else {
+        console.log(`Max retries exceeded for ${yesterday}, skipping`);
+        results.push({ date: yesterday, success: false, message: 'Max retries exceeded' });
+      }
+    } else {
+      console.log(`Yesterday's report (${yesterday}) exists`);
+    }
+    
+    // Generate today's report
+    const todayResult = await generateReportForDate(supabase, supabaseUrl, supabaseKey, lovableApiKey, today);
+    results.push({ date: today, ...todayResult });
+    
+    console.log('=== Daily Report Generation Finished ===');
+    console.log('Results:', JSON.stringify(results));
+    
+    const allSuccess = results.every(r => r.success);
     
     return new Response(JSON.stringify({ 
-      success: true,
-      message: 'Daily report generated successfully',
-      date: today,
+      success: allSuccess,
+      results,
     }), {
+      status: allSuccess ? 200 : 207, // 207 = Multi-Status
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
+    
   } catch (error) {
-    console.error('Error generating daily report:', error);
-    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }), {
+    console.error('Fatal error in report generation:', error);
+    return new Response(JSON.stringify({ 
+      error: error instanceof Error ? error.message : 'Unknown error',
+      results,
+    }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

@@ -143,6 +143,36 @@ export type Database = {
         }
         Relationships: []
       }
+      report_generation_log: {
+        Row: {
+          attempt_number: number
+          created_at: string
+          date: string
+          duration_ms: number | null
+          error_message: string | null
+          id: string
+          status: string
+        }
+        Insert: {
+          attempt_number?: number
+          created_at?: string
+          date: string
+          duration_ms?: number | null
+          error_message?: string | null
+          id?: string
+          status: string
+        }
+        Update: {
+          attempt_number?: number
+          created_at?: string
+          date?: string
+          duration_ms?: number | null
+          error_message?: string | null
+          id?: string
+          status?: string
+        }
+        Relationships: []
+      }
       reports: {
         Row: {
           content: string
