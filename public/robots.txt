@@ -16,4 +16,5 @@ Disallow: /admin
 Disallow: /auth
 
 Sitemap: https://enkelcrypto.se/sitemap.xml
+Sitemap: https://cyjacdvuszdlysjdkeis.supabase.co/functions/v1/generate-sitemap
 

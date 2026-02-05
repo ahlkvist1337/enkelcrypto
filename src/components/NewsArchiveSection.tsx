@@ -2,26 +2,18 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { ShareButtons } from "@/components/ShareButtons";
-import { Loader2, AlertCircle, ExternalLink } from "lucide-react";
+import { Loader2, AlertCircle, ArrowRight } from "lucide-react";
 import { useNewsArchive, NewsItem } from "@/hooks/useNews";
 import { useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Link } from "react-router-dom";
 
 const NEWS_PER_PAGE = 10;
 
 export const NewsArchiveSection = () => {
   const [offset, setOffset] = useState(0);
   const { data, isLoading, error } = useNewsArchive(NEWS_PER_PAGE, offset);
-  const [selectedNews, setSelectedNews] = useState<NewsItem | null>(null);
-  
+
   const news = data?.news || [];
   const totalCount = data?.totalCount || 0;
   const hasMore = offset + NEWS_PER_PAGE < totalCount;
@@ -69,17 +61,14 @@ export const NewsArchiveSection = () => {
           {news && news.length > 0 ? (
             <>
               {news.map((item) => (
-                <Card 
-                  key={item.id} 
-                  className="p-6 hover:shadow-lg transition-shadow cursor-pointer"
-                  onClick={() => setSelectedNews(item)}
-                >
+                <Link key={item.id} to={`/nyhet/${item.id}`}>
+                  <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer group">
                   <div className="flex gap-4">
                     {item.image_url && (
-                      <img 
-                        src={item.image_url} 
+                      <img
+                        src={item.image_url}
                         alt={item.title}
-                        className="h-24 w-24 rounded-lg object-cover flex-shrink-0"
+                        className="h-24 w-24 rounded-lg object-cover flex-shrink-0 group-hover:scale-105 transition-transform duration-300"
                         onError={(e) => {
                           e.currentTarget.style.display = 'none';
                         }}
@@ -98,17 +87,20 @@ export const NewsArchiveSection = () => {
                           })}
                         </span>
                       </div>
-                      <h2 className="text-lg font-semibold text-foreground line-clamp-2">
+                      <h2 className="text-lg font-semibold text-foreground line-clamp-2 group-hover:text-primary transition-colors">
                         {item.title}
                       </h2>
                       <p className="text-muted-foreground text-sm leading-relaxed line-clamp-2">
                         {item.summary}
                       </p>
+                      <span className="text-sm text-primary font-medium inline-flex items-center gap-1">
+                        Läs mer <ArrowRight className="w-3 h-3" />
+                      </span>
                     </div>
                   </div>
                 </Card>
+                </Link>
               ))}
-              
               {hasMore && (
                 <div className="flex flex-col items-center gap-2 py-6">
                   <Button
@@ -136,58 +128,6 @@ export const NewsArchiveSection = () => {
           )}
         </div>
       )}
-      
-      <Dialog open={!!selectedNews} onOpenChange={() => setSelectedNews(null)}>
-        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <div className="space-y-4">
-              {selectedNews?.image_url && (
-                <img 
-                  src={selectedNews.image_url} 
-                  alt={selectedNews.title}
-                  className="w-full h-48 rounded-lg object-cover"
-                  onError={(e) => {
-                    e.currentTarget.style.display = 'none';
-                  }}
-                />
-              )}
-              <DialogTitle className="text-2xl">{selectedNews?.title}</DialogTitle>
-              <div className="flex items-center justify-between flex-wrap gap-4">
-                <DialogDescription>
-                  {selectedNews && new Date(selectedNews.date).toLocaleDateString("sv-SE", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })}
-                </DialogDescription>
-                {selectedNews && (
-                  <div className="flex items-center gap-2">
-                    {selectedNews.source_url && (
-                      <Button variant="outline" size="sm" asChild>
-                        <a href={selectedNews.source_url} target="_blank" rel="noopener noreferrer">
-                          <ExternalLink className="h-4 w-4 mr-1" />
-                          Källa
-                        </a>
-                      </Button>
-                    )}
-                    <ShareButtons 
-                      title={selectedNews.title} 
-                      url={`https://enkelcrypto.se/nyhet/${selectedNews.id}`} 
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
-          </DialogHeader>
-          <div className="mt-4 prose prose-gray dark:prose-invert max-w-none">
-            {(selectedNews?.full_content || selectedNews?.summary)?.split('\n\n').map((paragraph, index) => (
-              <p key={index} className="text-foreground leading-relaxed mb-4">
-                {paragraph}
-              </p>
-            ))}
-          </div>
-        </DialogContent>
-      </Dialog>
     </>
   );
 };

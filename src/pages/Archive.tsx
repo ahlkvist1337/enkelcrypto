@@ -4,22 +4,14 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { ShareButtons } from "@/components/ShareButtons";
 import { SEOHead } from "@/components/SEOHead";
 import { NewsArchiveSection } from "@/components/NewsArchiveSection";
-import { Loader2, AlertCircle } from "lucide-react";
-import { useReports, Report } from "@/hooks/useCryptoData";
+import { Loader2, AlertCircle, ArrowRight } from "lucide-react";
+import { useReports } from "@/hooks/useCryptoData";
 import { useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, Link } from "react-router-dom";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 
 const REPORTS_PER_PAGE = 10;
 
@@ -29,8 +21,7 @@ const Archive = () => {
   
   const [offset, setOffset] = useState(0);
   const { data, isLoading, error } = useReports('daily', REPORTS_PER_PAGE, offset);
-  const [selectedReport, setSelectedReport] = useState<Report | null>(null);
-  
+
   const reports = data?.reports || [];
   const totalCount = data?.totalCount || 0;
   const hasMore = offset + REPORTS_PER_PAGE < totalCount;
@@ -51,11 +42,6 @@ const Archive = () => {
 
   const handleLoadMore = () => {
     setOffset(prev => prev + REPORTS_PER_PAGE);
-  };
-
-  const formatContent = (content: string) => {
-    // Convert **text** to <strong>text</strong> for bold formatting
-    return content.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
   };
 
   return (
@@ -121,11 +107,8 @@ const Archive = () => {
                     {reports && reports.length > 0 ? (
                       <>
                         {reports.map((report) => (
-                          <Card 
-                            key={report.id} 
-                            className="p-6 hover:shadow-lg transition-shadow cursor-pointer"
-                            onClick={() => setSelectedReport(report)}
-                          >
+                      <Link key={report.id} to={`/rapport/${report.type}/${report.date}`}>
+                        <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer group">
                             <div className="space-y-3">
                               <div className="flex items-center space-x-2">
                                 <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
@@ -139,14 +122,18 @@ const Archive = () => {
                                   })}
                                 </span>
                               </div>
-                              <h2 className="text-xl font-semibold text-foreground">
+                              <h2 className="text-xl font-semibold text-foreground group-hover:text-primary transition-colors">
                                 {report.title}
                               </h2>
                               <p className="text-muted-foreground leading-relaxed line-clamp-3">
                                 {report.content}
                               </p>
+                              <span className="text-sm text-primary font-medium inline-flex items-center gap-1">
+                                Läs rapporten <ArrowRight className="w-3 h-3" />
+                              </span>
                             </div>
                           </Card>
+                      </Link>
                         ))}
                         
                         {hasMore && (
@@ -182,32 +169,6 @@ const Archive = () => {
                 <NewsArchiveSection />
               </TabsContent>
             </Tabs>
-            
-            <Dialog open={!!selectedReport} onOpenChange={() => setSelectedReport(null)}>
-              <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
-                <DialogHeader>
-                  <div className="space-y-4">
-                    <DialogTitle className="text-2xl">{selectedReport?.title}</DialogTitle>
-                    <div className="flex items-center justify-between flex-wrap gap-4">
-                      <DialogDescription>
-                        {selectedReport && new Date(selectedReport.date).toLocaleDateString("sv-SE", {
-                          year: "numeric",
-                          month: "long",
-                          day: "numeric",
-                        })}
-                      </DialogDescription>
-                      {selectedReport && <ShareButtons title={selectedReport.title} url={`https://enkelcrypto.se/rapport/daily/${selectedReport.date}`} />}
-                    </div>
-                  </div>
-                </DialogHeader>
-                <div className="mt-4 prose prose-gray dark:prose-invert max-w-none">
-                  <div 
-                    className="whitespace-pre-wrap text-foreground leading-relaxed"
-                    dangerouslySetInnerHTML={{ __html: selectedReport ? formatContent(selectedReport.content) : '' }}
-                  />
-                </div>
-              </DialogContent>
-            </Dialog>
           </div>
         </div>
       </main>

@@ -37,6 +37,7 @@ const NewsDetail = () => {
           type="article"
           publishedTime={news.date}
           ogImage={news.image_url || undefined}
+          articleType="news"
         />
       )}
       <div className="min-h-screen bg-background flex flex-col">
