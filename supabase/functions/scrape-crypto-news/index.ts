@@ -206,30 +206,44 @@ serve(async (req) => {
   const supabase = createClient(supabaseUrl, supabaseKey);
   
   try {
-    // Check if request is from an authenticated admin (optional for cron jobs)
+    // Validate cron secret or admin auth
+    const cronSecret = req.headers.get('X-Cron-Secret');
+    const expectedSecret = Deno.env.get('CRON_SECRET');
     const authHeader = req.headers.get('Authorization');
-    if (authHeader) {
+    
+    // Check cron secret first
+    if (cronSecret && cronSecret === expectedSecret) {
+      // Valid cron job, proceed
+    } else if (authHeader) {
+      // Check admin auth
       const token = authHeader.replace('Bearer ', '');
       const { data: { user }, error: authError } = await supabase.auth.getUser(token);
       
-      if (!authError && user) {
-        const { data: roleData } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', user.id)
-          .eq('role', 'admin')
-          .single();
-        
-        if (!roleData) {
-          return new Response(
-            JSON.stringify({ error: 'Forbidden - Admin access required' }),
-            { 
-              status: 403,
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-            }
-          );
-        }
+      if (authError || !user) {
+        return new Response(
+          JSON.stringify({ error: 'Unauthorized' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
+      
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .eq('role', 'admin')
+        .single();
+      
+      if (!roleData) {
+        return new Response(
+          JSON.stringify({ error: 'Forbidden - Admin access required' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    } else {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized - Missing authentication' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
     
     // Check if we should run (based on retry logic)
