@@ -1,15 +1,11 @@
-import { useState } from "react";
 import { Card } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useNews, NewsItem } from "@/hooks/useNews";
-import { formatDistanceToNow } from "date-fns";
-import { sv } from "date-fns/locale";
-import { ExternalLink } from "lucide-react";
+import { Link } from "react-router-dom";
+import { ArrowRight } from "lucide-react";
 
 export const NewsSection = () => {
   const { data: news, isLoading } = useNews();
-  const [selectedNews, setSelectedNews] = useState<NewsItem | null>(null);
 
   const getTimeAgo = (dateString: string) => {
     try {
@@ -62,20 +58,26 @@ export const NewsSection = () => {
   }
 
   return (
-    <>
-      <div className="space-y-4">
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-foreground">Senaste Nyheterna</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {news.map((item) => (
-            <Card 
-              key={item.id} 
-              className="p-5 hover:shadow-lg transition-shadow cursor-pointer group"
-              onClick={() => setSelectedNews(item)}
+        <Link 
+          to="/arkiv?tab=nyheter" 
+          className="text-sm text-primary hover:underline flex items-center gap-1"
+        >
+          Visa alla <ArrowRight className="w-4 h-4" />
+        </Link>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {news.map((item) => (
+          <Link key={item.id} to={`/nyhet/${item.id}`}>
+            <Card
+              className="p-5 hover:shadow-lg transition-shadow cursor-pointer group h-full"
             >
               {item.image_url && (
                 <div className="mb-3 -mx-5 -mt-5 overflow-hidden rounded-t-lg">
-                  <img 
-                    src={item.image_url} 
+                  <img
+                    src={item.image_url}
                     alt={item.title}
                     className="w-full h-40 object-cover group-hover:scale-105 transition-transform duration-300"
                   />
@@ -91,57 +93,14 @@ export const NewsSection = () => {
                 <p className="text-sm text-muted-foreground leading-relaxed line-clamp-3">
                   {item.summary}
                 </p>
+                <span className="text-sm text-primary font-medium inline-flex items-center gap-1 pt-1">
+                  Läs mer <ArrowRight className="w-3 h-3" />
+                </span>
               </div>
             </Card>
-          ))}
-        </div>
+          </Link>
+        ))}
       </div>
-
-      <Dialog open={!!selectedNews} onOpenChange={() => setSelectedNews(null)}>
-        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-bold pr-8">
-              {selectedNews?.title}
-            </DialogTitle>
-          </DialogHeader>
-          
-          {selectedNews?.image_url && (
-            <div className="w-full overflow-hidden rounded-lg mb-4">
-              <img 
-                src={selectedNews.image_url} 
-                alt={selectedNews.title}
-                className="w-full h-64 object-cover"
-              />
-            </div>
-          )}
-          
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              {selectedNews && getTimeAgo(selectedNews.created_at)}
-            </p>
-            
-            <div className="prose prose-slate max-w-none">
-              {(selectedNews?.full_content || selectedNews?.summary)?.split('\n\n').map((paragraph, index) => (
-                <p key={index} className="text-foreground/90 leading-relaxed mb-4">
-                  {paragraph}
-                </p>
-              ))}
-            </div>
-            
-            {selectedNews?.source_url && (
-              <a 
-                href={selectedNews.source_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 text-primary hover:underline text-sm"
-              >
-                <ExternalLink className="w-4 h-4" />
-                Läs originalkällan
-              </a>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
-    </>
+    </div>
   );
 };

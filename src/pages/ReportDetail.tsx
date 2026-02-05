@@ -56,6 +56,7 @@ const ReportDetail = () => {
         canonical={reportUrl}
         type="article"
         publishedTime={report?.created_at}
+        articleType="report"
       />
       <div className="min-h-screen bg-background flex flex-col">
         <Header />

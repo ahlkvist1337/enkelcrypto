@@ -7,6 +7,7 @@ interface SEOHeadProps {
   ogImage?: string;
   type?: "website" | "article";
   publishedTime?: string;
+  articleType?: "news" | "report";
 }
 
 export const SEOHead = ({
@@ -16,9 +17,77 @@ export const SEOHead = ({
   ogImage = "https://enkelcrypto.se/og-image.png",
   type = "website",
   publishedTime,
+  articleType,
 }: SEOHeadProps) => {
   const siteName = "EnkelCrypto";
   const fullTitle = title.includes(siteName) ? title : `${title} | ${siteName}`;
+
+  const getStructuredData = () => {
+    if (type === "article" && articleType === "news") {
+      return {
+        "@context": "https://schema.org",
+        "@type": "NewsArticle",
+        "headline": title,
+        "url": canonical,
+        "description": description,
+        "image": ogImage,
+        "datePublished": publishedTime,
+        "dateModified": publishedTime,
+        "author": {
+          "@type": "Organization",
+          "name": siteName,
+          "url": "https://enkelcrypto.se"
+        },
+        "publisher": {
+          "@type": "Organization",
+          "name": siteName,
+          "url": "https://enkelcrypto.se",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://enkelcrypto.se/favicon.png"
+          }
+        },
+        "mainEntityOfPage": {
+          "@type": "WebPage",
+          "@id": canonical
+        },
+        "inLanguage": "sv-SE"
+      };
+    }
+    
+    if (type === "article") {
+      return {
+        "@context": "https://schema.org",
+        "@type": "Article",
+        "headline": title,
+        "url": canonical,
+        "description": description,
+        "image": ogImage,
+        "datePublished": publishedTime,
+        "author": {
+          "@type": "Organization",
+          "name": siteName,
+          "url": "https://enkelcrypto.se"
+        },
+        "publisher": {
+          "@type": "Organization",
+          "name": siteName,
+          "url": "https://enkelcrypto.se"
+        },
+        "inLanguage": "sv-SE"
+      };
+    }
+    
+    return {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": siteName,
+      "url": canonical,
+      "description": description,
+      "image": ogImage,
+      "inLanguage": "sv-SE"
+    };
+  };
 
   return (
     <Helmet>
@@ -46,21 +115,7 @@ export const SEOHead = ({
 
       {/* Schema.org structured data */}
       <script type="application/ld+json">
-        {JSON.stringify({
-          "@context": "https://schema.org",
-          "@type": type === "article" ? "Article" : "WebSite",
-          "name": siteName,
-          "url": canonical,
-          "description": description,
-          "image": ogImage,
-          ...(type === "article" && publishedTime ? {
-            "datePublished": publishedTime,
-            "author": {
-              "@type": "Organization",
-              "name": siteName,
-            },
-          } : {}),
-        })}
+        {JSON.stringify(getStructuredData())}
       </script>
     </Helmet>
   );
