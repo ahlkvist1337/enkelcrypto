@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ShareButtons } from "@/components/ShareButtons";
 import { Report } from "@/hooks/useCryptoData";
+import DOMPurify from "dompurify";
 
 interface DailyReportProps {
   report?: Report;
@@ -18,7 +19,9 @@ export const DailyReport = ({ report, isLoading }: DailyReportProps) => {
 
   const formatContent = (content: string) => {
     // Convert **text** to <strong>text</strong> for bold formatting
-    return content.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    const withStrong = content.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    // Sanitize output to prevent XSS attacks
+    return DOMPurify.sanitize(withStrong, { ALLOWED_TAGS: ['strong', 'br', 'p', 'em'] });
   };
 
   if (isLoading) {

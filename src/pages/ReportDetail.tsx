@@ -11,6 +11,7 @@ import { ArrowLeft, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
+import DOMPurify from "dompurify";
 
 const ReportDetail = () => {
   const { date, type = "daily" } = useParams<{ date: string; type?: string }>();
@@ -34,7 +35,9 @@ const ReportDetail = () => {
   });
 
   const formatContent = (content: string) => {
-    return content.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    const withStrong = content.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    // Sanitize output to prevent XSS attacks
+    return DOMPurify.sanitize(withStrong, { ALLOWED_TAGS: ['strong', 'br', 'p', 'em'] });
   };
 
   const formattedDate = date ? new Date(date).toLocaleDateString("sv-SE", {
