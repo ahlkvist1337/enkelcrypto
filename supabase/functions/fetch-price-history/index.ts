@@ -14,11 +14,28 @@ serve(async (req) => {
 
   try {
     const url = new URL(req.url);
-    const coinId = url.searchParams.get('coinId') || 'bitcoin';
-    const days = url.searchParams.get('days') || '7';
+    const coinIdParam = url.searchParams.get('coinId') || 'bitcoin';
+    const daysParam = url.searchParams.get('days') || '7';
+
+    // Validate coinId (alphanumeric and hyphens only, max 50 chars)
+    if (!/^[a-z0-9-]+$/i.test(coinIdParam) || coinIdParam.length > 50) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid coinId parameter' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate days (must be numeric, 1-365)
+    const days = parseInt(daysParam, 10);
+    if (isNaN(days) || days < 1 || days > 365) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid days parameter (must be 1-365)' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     const response = await fetch(
-      `${COINGECKO_API}/coins/${coinId}/market_chart?vs_currency=usd&days=${days}&interval=daily`
+      `${COINGECKO_API}/coins/${encodeURIComponent(coinIdParam)}/market_chart?vs_currency=usd&days=${days}&interval=daily`
     );
 
     if (!response.ok) {
@@ -36,7 +53,7 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify({
-        coinId,
+        coinId: coinIdParam,
         days,
         data: formattedData,
       }),
