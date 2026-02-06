@@ -9,9 +9,16 @@ interface MarketOverviewProps {
     marketCap: number;
   };
   isLoading?: boolean;
+  errorMessage?: string;
+  onRetry?: () => void;
 }
 
-export const MarketOverview = ({ marketData, isLoading }: MarketOverviewProps) => {
+export const MarketOverview = ({
+  marketData,
+  isLoading,
+  errorMessage,
+  onRetry,
+}: MarketOverviewProps) => {
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -35,7 +42,31 @@ export const MarketOverview = ({ marketData, isLoading }: MarketOverviewProps) =
       </div>
     );
   }
-  
+
+  if (!marketData && errorMessage) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="p-4 md:col-span-3">
+          <div className="flex items-start justify-between gap-4">
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-foreground">Kunde inte ladda marknadsdata</p>
+              <p className="text-xs text-muted-foreground break-words">{errorMessage}</p>
+            </div>
+            {onRetry && (
+              <button
+                type="button"
+                onClick={onRetry}
+                className="inline-flex items-center justify-center rounded-md px-3 py-2 text-sm font-medium border border-border bg-background hover:bg-accent hover:text-accent-foreground transition-colors"
+              >
+                Försök igen
+              </button>
+            )}
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
   if (!marketData) return null;
 
   const data = [
