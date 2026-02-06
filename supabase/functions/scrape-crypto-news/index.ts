@@ -246,21 +246,7 @@ serve(async (req) => {
       );
     }
     
-    // Check if we should run (based on retry logic)
-    const shouldRun = await shouldRetry(supabase);
-    if (!shouldRun) {
-      console.log('Skipping scrape - already completed successfully today');
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          message: 'Already completed successfully today, skipping' 
-        }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200 
-        }
-      );
-    }
+    // Note: shouldRetry check removed - we now allow multiple runs per day
     
     const attemptNumber = await getAttemptNumber(supabase);
     console.log(`Starting crypto news scraping (attempt ${attemptNumber})...`);
@@ -296,8 +282,8 @@ serve(async (req) => {
     
     console.log(`Filtered to ${recentArticles.length} articles from last 24 hours`);
     
-    // Take 5 most recent articles
-    const topArticles = recentArticles.slice(0, 5);
+    // Take 1 most recent article (runs every 2 hours for ~12 articles/day)
+    const topArticles = recentArticles.slice(0, 1);
     const today = getSwedishDate();
     
     let savedCount = 0;
