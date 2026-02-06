@@ -13,7 +13,13 @@ import { useTodaysReport, useMarketMovers, useCryptoMarketData } from "@/hooks/u
 const Index = () => {
   const { data: report, isLoading: reportLoading, isError: reportError } = useTodaysReport();
   const { data: movers, isLoading: moversLoading, isError: moversError } = useMarketMovers();
-  const { data: marketData, isLoading: marketLoading, isError: marketError } = useCryptoMarketData();
+  const {
+    data: marketData,
+    isLoading: marketLoading,
+    isError: marketError,
+    error: marketErrorObj,
+    refetch: refetchMarket,
+  } = useCryptoMarketData();
 
   return (
     <>
@@ -23,7 +29,12 @@ const Index = () => {
         <main className="flex-grow">
           <div className="container mx-auto px-4 py-8 space-y-8">
             <DailyReport report={report} isLoading={reportLoading && !reportError} />
-            <MarketOverview marketData={marketData} isLoading={marketLoading && !marketError} />
+            <MarketOverview
+              marketData={marketData}
+              isLoading={marketLoading && !marketError}
+              errorMessage={marketError ? (marketErrorObj instanceof Error ? marketErrorObj.message : 'Okänt fel') : undefined}
+              onRetry={marketError ? () => refetchMarket() : undefined}
+            />
             <PriceChart />
             <WinnersLosers movers={movers} isLoading={moversLoading && !moversError} />
             <AffiliateLinks />

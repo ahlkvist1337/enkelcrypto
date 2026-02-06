@@ -132,16 +132,26 @@ export const useCryptoMarketData = () => {
   return useQuery({
     queryKey: ['crypto-market-data'],
     queryFn: async () => {
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/fetch-crypto-data`
-      );
-      
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/fetch-crypto-data`;
+
+      // Avoid caching a transient 404 during deploy propagation / CDN edges
+      const response = await fetch(url, {
+        cache: 'no-store',
+        headers: {
+          'Accept': 'application/json',
+          'Cache-Control': 'no-cache',
+        },
+      });
+
       if (!response.ok) {
-        throw new Error('Failed to fetch crypto data');
+        const bodyText = await response.text().catch(() => '');
+        throw new Error(`fetch-crypto-data ${response.status}: ${bodyText || response.statusText}`);
       }
-      
+
       return await response.json();
     },
+    retry: 2,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 8000),
     refetchInterval: 60000, // Refresh every minute
     staleTime: 30000, // Consider data fresh for 30 seconds
   });
