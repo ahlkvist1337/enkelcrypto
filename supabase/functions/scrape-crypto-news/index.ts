@@ -270,9 +270,12 @@ serve(async (req) => {
     }
     
     const newsData = await newsResponse.json();
-    const allArticles = newsData.Data || [];
     
-    console.log(`Found ${allArticles.length} articles from CryptoCompare`);
+    // Safely handle API response - Data may be undefined or not an array
+    const rawData = newsData?.Data;
+    const allArticles = Array.isArray(rawData) ? rawData : [];
+    
+    console.log(`Found ${allArticles.length} articles from CryptoCompare (raw type: ${typeof rawData})`);
     
     // Filter articles from last 24 hours
     const twentyFourHoursAgo = Date.now() / 1000 - (24 * 60 * 60);
