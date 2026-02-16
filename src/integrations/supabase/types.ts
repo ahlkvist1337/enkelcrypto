@@ -144,6 +144,7 @@ export type Database = {
           full_content: string | null
           id: string
           image_url: string | null
+          slug: string
           source_url: string | null
           summary: string
           title: string
@@ -154,6 +155,7 @@ export type Database = {
           full_content?: string | null
           id?: string
           image_url?: string | null
+          slug: string
           source_url?: string | null
           summary: string
           title: string
@@ -164,6 +166,7 @@ export type Database = {
           full_content?: string | null
           id?: string
           image_url?: string | null
+          slug?: string
           source_url?: string | null
           summary?: string
           title?: string
@@ -311,6 +314,7 @@ export type Database = {
     }
     Functions: {
       cleanup_old_health_checks: { Args: never; Returns: undefined }
+      generate_slug: { Args: { title: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

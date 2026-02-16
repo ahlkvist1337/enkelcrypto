@@ -39,7 +39,7 @@ export const Footer = () => {
               {latestNews.map((item) => (
                 <li key={item.id}>
                   <Link 
-                    to={`/nyhet/${item.id}`}
+                    to={`/nyhet/${item.slug}`}
                     className="text-sm text-muted-foreground hover:text-primary transition-colors line-clamp-1"
                   >
                     {item.title}

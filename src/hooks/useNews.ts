@@ -8,6 +8,7 @@ export interface NewsItem {
   full_content: string | null;
   source_url: string | null;
   image_url: string | null;
+  slug: string;
   date: string;
   created_at: string;
 }
@@ -58,19 +59,19 @@ export const useNewsArchive = (limit: number = 10, offset: number = 0) => {
   });
 };
 
-export const useNewsItem = (id: string) => {
+export const useNewsItem = (slug: string) => {
   return useQuery({
-    queryKey: ["news-item", id],
+    queryKey: ["news-item", slug],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("news")
         .select("*")
-        .eq("id", id)
+        .eq("slug", slug)
         .single();
 
       if (error) throw error;
       return data as NewsItem;
     },
-    enabled: !!id,
+    enabled: !!slug,
   });
 };

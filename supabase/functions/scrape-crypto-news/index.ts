@@ -322,6 +322,16 @@ serve(async (req) => {
           continue;
         }
         
+        // Generate slug from Swedish title
+        const slug = swedishTitle
+          .toLowerCase()
+          .replace(/å/g, 'a').replace(/ä/g, 'a').replace(/ö/g, 'o').replace(/é/g, 'e').replace(/ü/g, 'u')
+          .replace(/[^a-z0-9\s\-]/g, '')
+          .replace(/\s+/g, '-')
+          .replace(/-+/g, '-')
+          .replace(/^-|-$/g, '')
+          .substring(0, 80);
+        
         // Save to database
         const { error: insertError } = await supabase
           .from('news')
@@ -331,7 +341,8 @@ serve(async (req) => {
             full_content: fullContent,
             source_url: article.url || article.guid,
             image_url: article.imageurl || null,
-            date: today
+            date: today,
+            slug: slug,
           }, {
             onConflict: 'title',
             ignoreDuplicates: true

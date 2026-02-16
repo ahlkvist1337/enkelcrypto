@@ -376,18 +376,25 @@ export default function Admin() {
           'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify({ force: true }),
       });
 
-      if (!response.ok) throw new Error('Failed to generate weekly report');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(errorData.error || 'Failed to generate weekly report');
+      }
+      
+      await queryClient.invalidateQueries({ queryKey: ["reports"] });
+      await queryClient.invalidateQueries({ queryKey: ["weekly-reports"] });
       
       toast({
         title: "Genererad!",
-        description: "Veckans rapport har genererats",
+        description: "Veckorapporten har genererats",
       });
     } catch (error) {
       toast({
         title: "Fel",
-        description: "Kunde inte generera veckorapport",
+        description: error instanceof Error ? error.message : "Kunde inte generera veckorapport",
         variant: "destructive",
       });
     } finally {

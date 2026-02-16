@@ -20,10 +20,10 @@
      const today = new Date().toISOString().split("T")[0];
  
      // Fetch all news
-     const { data: news, error: newsError } = await supabase
-       .from("news")
-       .select("id, date, created_at")
-       .order("date", { ascending: false });
+      const { data: news, error: newsError } = await supabase
+        .from("news")
+        .select("id, slug, date, created_at")
+        .order("date", { ascending: false });
  
      if (newsError) {
        console.error("Error fetching news:", newsError);
@@ -81,13 +81,13 @@
      if (news && news.length > 0) {
        for (const item of news) {
          const lastmod = item.date || item.created_at.split("T")[0];
-         xml += `
-   <url>
-     <loc>${baseUrl}/nyhet/${item.id}</loc>
-     <lastmod>${lastmod}</lastmod>
-     <changefreq>monthly</changefreq>
-     <priority>0.7</priority>
-   </url>`;
+          xml += `
+    <url>
+      <loc>${baseUrl}/nyhet/${item.slug || item.id}</loc>
+      <lastmod>${lastmod}</lastmod>
+      <changefreq>monthly</changefreq>
+      <priority>0.7</priority>
+    </url>`;
        }
      }
  
