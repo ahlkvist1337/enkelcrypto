@@ -32,7 +32,7 @@ const App = () => (
               <Route path="/arkiv" element={<Archive />} />
               <Route path="/veckorapporter" element={<WeeklyReports />} />
               <Route path="/rapport/:type/:date" element={<ReportDetail />} />
-              <Route path="/nyhet/:id" element={<NewsDetail />} />
+              <Route path="/nyhet/:slug" element={<NewsDetail />} />
               <Route path="/auth" element={<Auth />} />
               <Route
                 path="/admin"

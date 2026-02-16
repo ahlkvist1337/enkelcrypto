@@ -18,6 +18,15 @@ serve(async (req) => {
     
     const supabase = createClient(supabaseUrl, supabaseKey);
     
+    // Parse request body for force parameter
+    let force = false;
+    try {
+      const body = await req.json();
+      force = body?.force === true;
+    } catch {
+      // No body or invalid JSON — that's fine (cron jobs send no body)
+    }
+    
     // Validate cron secret or admin auth
     const cronSecret = req.headers.get('X-Cron-Secret');
     const expectedSecret = Deno.env.get('CRON_SECRET');
@@ -58,27 +67,45 @@ serve(async (req) => {
       );
     }
     
-    console.log('Starting weekly report generation...');
+    console.log(`Starting weekly report generation (force: ${force})...`);
     
-    // Check if today is Sunday (0 = Sunday)
-    const today = new Date();
-    const dayOfWeek = today.getDay();
+    const now = new Date();
     
-    if (dayOfWeek !== 0) {
-      console.log('Not Sunday, skipping weekly report generation');
-      return new Response(
-        JSON.stringify({ message: 'Weekly reports are only generated on Sundays' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
-      );
+    // Calculate report end date (most recent Sunday) and start date (7 days before that)
+    let reportEndDate: Date;
+    
+    if (force) {
+      // Find the most recent past Sunday
+      const dayOfWeek = now.getDay();
+      reportEndDate = new Date(now);
+      if (dayOfWeek === 0) {
+        // Today is Sunday, use today
+      } else {
+        reportEndDate.setDate(now.getDate() - dayOfWeek);
+      }
+    } else {
+      // Cron mode: only run on Sundays
+      if (now.getDay() !== 0) {
+        console.log('Not Sunday, skipping weekly report generation');
+        return new Response(
+          JSON.stringify({ message: 'Weekly reports are only generated on Sundays' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+        );
+      }
+      reportEndDate = now;
     }
     
+    const reportEndStr = reportEndDate.toISOString().split('T')[0];
+    const reportStartDate = new Date(reportEndDate);
+    reportStartDate.setDate(reportStartDate.getDate() - 7);
+    const reportStartStr = reportStartDate.toISOString().split('T')[0];
+    
     // Check if report already exists for this week
-    const todayStr = today.toISOString().split('T')[0];
     const { data: existingReport } = await supabase
       .from('reports')
       .select('id')
       .eq('type', 'weekly')
-      .eq('date', todayStr)
+      .eq('date', reportEndStr)
       .maybeSingle();
     
     if (existingReport) {
@@ -100,20 +127,16 @@ serve(async (req) => {
     
     const cryptoData = await cryptoDataResponse.json();
     
-    // Get date range for the week
-    const oneWeekAgo = new Date(today);
-    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-    
     // Fetch last week's market movers for trend analysis
     const { data: weekMovers } = await supabase
       .from('market_movers')
       .select('*')
-      .gte('date', oneWeekAgo.toISOString().split('T')[0])
+      .gte('date', reportStartStr)
       .order('date', { ascending: true });
     
     // Prepare data summary for AI
     const dataSummary = `
-Veckoöversikt ${oneWeekAgo.toLocaleDateString('sv-SE')} - ${today.toLocaleDateString('sv-SE')}:
+Veckoöversikt ${reportStartDate.toLocaleDateString('sv-SE')} - ${reportEndDate.toLocaleDateString('sv-SE')}:
 
 NUVARANDE LÄGE:
 Bitcoin: ${cryptoData.bitcoin.price.toLocaleString('sv-SE')} SEK (${cryptoData.bitcoin.change24h.toFixed(2)}% på 24h)
@@ -207,10 +230,10 @@ VIKTIGT:
     const { error: reportError } = await supabase
       .from('reports')
       .insert({
-        title: `Veckorapport ${oneWeekAgo.toLocaleDateString('sv-SE')} - ${today.toLocaleDateString('sv-SE')}`,
+        title: `Veckorapport ${reportStartDate.toLocaleDateString('sv-SE')} - ${reportEndDate.toLocaleDateString('sv-SE')}`,
         content: reportContent,
         type: 'weekly',
-        date: today.toISOString().split('T')[0],
+        date: reportEndStr,
       });
 
     if (reportError) {

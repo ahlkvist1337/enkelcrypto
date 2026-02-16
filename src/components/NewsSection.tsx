@@ -70,7 +70,7 @@ export const NewsSection = () => {
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {news.map((item) => (
-          <Link key={item.id} to={`/nyhet/${item.id}`}>
+          <Link key={item.id} to={`/nyhet/${item.slug}`}>
             <Card
               className="p-5 hover:shadow-lg transition-shadow cursor-pointer group h-full"
             >

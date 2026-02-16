@@ -12,8 +12,8 @@ import { useNewsItem } from "@/hooks/useNews";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const NewsDetail = () => {
-  const { id } = useParams<{ id: string }>();
-  const { data: news, isLoading, error } = useNewsItem(id || "");
+  const { slug } = useParams<{ slug: string }>();
+  const { data: news, isLoading, error } = useNewsItem(slug || "");
 
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString("sv-SE", {
@@ -33,7 +33,7 @@ const NewsDetail = () => {
         <SEOHead 
           title={news.title}
           description={getDescription(news.summary)}
-          canonical={`https://enkelcrypto.se/nyhet/${id}`}
+          canonical={`https://enkelcrypto.se/nyhet/${slug}`}
           type="article"
           publishedTime={news.date}
           ogImage={news.image_url || undefined}
@@ -113,7 +113,7 @@ const NewsDetail = () => {
                         )}
                         <ShareButtons 
                           title={news.title} 
-                          url={`https://enkelcrypto.se/nyhet/${id}`} 
+                          url={`https://enkelcrypto.se/nyhet/${slug}`} 
                         />
                       </div>
                     </div>

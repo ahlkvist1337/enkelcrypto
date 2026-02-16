@@ -61,7 +61,7 @@ export const NewsArchiveSection = () => {
           {news && news.length > 0 ? (
             <>
               {news.map((item) => (
-                <Link key={item.id} to={`/nyhet/${item.id}`}>
+                <Link key={item.id} to={`/nyhet/${item.slug}`}>
                   <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer group">
                   <div className="flex gap-4">
                     {item.image_url && (
