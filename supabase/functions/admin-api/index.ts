@@ -303,6 +303,36 @@ serve(async (req) => {
       });
     }
     
+    // Delete news article
+    if (action === 'delete-news' && req.method === 'DELETE') {
+      const { newsId } = await req.json();
+      
+      if (!newsId || typeof newsId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(newsId)) {
+        return new Response(JSON.stringify({ error: 'Invalid news ID' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      
+      const { error } = await supabase
+        .from('news')
+        .delete()
+        .eq('id', newsId);
+      
+      if (error) {
+        console.error('Delete news error:', error);
+        return new Response(JSON.stringify({ error: error.message }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      
+      console.log('Successfully deleted news:', newsId);
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    
     return new Response(JSON.stringify({ error: 'Invalid action' }), {
       status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

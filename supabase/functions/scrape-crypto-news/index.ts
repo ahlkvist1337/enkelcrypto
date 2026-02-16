@@ -296,6 +296,21 @@ serve(async (req) => {
       processedCount++;
       
       try {
+        // Check if source_url already exists to prevent duplicates
+        const sourceUrl = article.url || article.guid;
+        if (sourceUrl) {
+          const { data: existing } = await supabase
+            .from('news')
+            .select('id')
+            .eq('source_url', sourceUrl)
+            .limit(1);
+          
+          if (existing && existing.length > 0) {
+            console.log(`Skipping duplicate article (source_url already exists): ${article.title.substring(0, 50)}...`);
+            continue;
+          }
+        }
+        
         // Generate Swedish content using AI with retry
         const aiResult = await callAIWithRetry(lovableApiKey, article);
         
