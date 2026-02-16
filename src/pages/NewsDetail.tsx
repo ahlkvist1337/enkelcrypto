@@ -1,4 +1,4 @@
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Card } from "@/components/ui/card";
@@ -7,13 +7,33 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ShareButtons } from "@/components/ShareButtons";
 import { SEOHead } from "@/components/SEOHead";
-import { ArrowLeft, AlertCircle, ExternalLink } from "lucide-react";
+import { ArrowLeft, AlertCircle, ExternalLink, Trash2 } from "lucide-react";
 import { useNewsItem } from "@/hooks/useNews";
+import { useAuth } from "@/hooks/useAuth";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { useState } from "react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const NewsDetail = () => {
   const { slug } = useParams<{ slug: string }>();
   const { data: news, isLoading, error } = useNewsItem(slug || "");
+  const { isAdmin, session } = useAuth();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString("sv-SE", {
@@ -25,6 +45,36 @@ const NewsDetail = () => {
 
   const getDescription = (content: string) => {
     return content.substring(0, 160).replace(/\*\*/g, '') + (content.length > 160 ? '...' : '');
+  };
+
+  const handleDeleteNews = async () => {
+    if (!news || !session) return;
+    setIsDeleting(true);
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-api?action=delete-news`,
+        {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ newsId: news.id }),
+        }
+      );
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || 'Kunde inte ta bort nyheten');
+      }
+      toast.success('Nyheten har tagits bort');
+      queryClient.invalidateQueries({ queryKey: ['news'] });
+      queryClient.invalidateQueries({ queryKey: ['news-archive'] });
+      navigate('/arkiv?tab=nyheter');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Något gick fel');
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   return (
@@ -115,6 +165,29 @@ const NewsDetail = () => {
                           title={news.title} 
                           url={`https://enkelcrypto.se/nyhet/${slug}`} 
                         />
+                        {isAdmin && (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="outline" size="sm" className="text-destructive hover:text-destructive" disabled={isDeleting}>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Ta bort nyhet</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Är du säker på att du vill ta bort denna nyhet? Detta kan inte ångras.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Avbryt</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleDeleteNews} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                  Ta bort
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        )}
                       </div>
                     </div>
                     
