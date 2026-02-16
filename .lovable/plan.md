@@ -1,32 +1,89 @@
 
-# Fix: Rapport visas inte + nyheter uppdateras inte i UI
 
-## Problem 1: Rapport genereras men syns inte
-Admin-panelens "Generera Daglig Rapport"-knapp anropar `admin-api` som i sin tur anropar `generate-daily-report` med **service role key** som Bearer-token. Men `generate-daily-report` forsöker använda den token som en **user token** via `getUser()` -- det misslyckas tyst och returnerar 401. Admin-API:n kontrollerar inte svarskoden utan skickar tillbaka svaret som 200, och toasten visar "Genererad!" trots att ingenting skapades.
+# Plan: Veckorapport-fix + SEO-vanliga URL:er for nyheter
 
-Senaste rapporten i databasen är från **5 februari** -- inga nya har skapats.
+## Del 1: Veckorapport -- force-stod med forra veckans datum
 
-### Lösning
-Ändra `admin-api` så att den anropar `generate-daily-report` med användarens faktiska auth-token (som redan verifierats som admin), istället för service role key. Alternativt kan den skicka med `X-Cron-Secret`. Dessutom: kontrollera svarskoden och visa fel om genereringen misslyckas.
+### Problem
+Funktionen avbryter om det inte ar sondag, och satter dagens datum pa rapporten. Nar admin manuellt vill generera ska den anvanda forra sondagen som slutdatum och veckan dessforinnan som startdatum.
 
-## Problem 2: Nyheter -- bara 1 kommer, sedan inga fler
-Nyhetsskrapningen är designad att hämta **1 artikel per körning** (för att sprida nyheter jämnt över dygnet). Den filtrerar bort artiklar som redan finns i databasen. Om samma artiklar returneras av API:t vid ett nytt klick, sparas ingenting nytt. Detta fungerar som tänkt -- men UI:t uppdateras inte efter att admin klickat, så det ser ut som att inget händer.
+### Andringar
 
-### Lösning
-Efter att nyhetsskrapningen kört klart, invalidera React Query-cachen för nyheter (`queryKey: ["news"]`) så att frontenden hämtar den nya listan automatiskt.
+**`supabase/functions/generate-weekly-report/index.ts`**
+- Lasa `force`-parameter fran request body
+- Om `force: true`: hoppa over sondagskontroll
+- Berakna "senaste sondag" som rapportens slutdatum (om idag ar onsdag 19/2, anvand sondag 16/2)
+- Berakna en vecka tillbaka fran den sondagen som startdatum (9/2)
+- Anvanda dessa datum for titel, datahamtning och `date`-faltet i databasen
 
-## Tekniska ändringar
+**`src/pages/Admin.tsx`**
+- Skicka `{ force: true }` i body vid manuellt anrop
+- Invalidera `["reports"]` och `["weekly-reports"]` efter lyckad generering
+- Visa backend-felmeddelanden i toast
 
-### 1. `supabase/functions/admin-api/index.ts`
-- Rad 286-296: Ändra `generate-report`-anropet att skicka med användarens auth-token istället for service role key
-- Lägg till kontroll av `response.ok` och returnera korrekt felkod om det misslyckas
+---
 
-### 2. `src/pages/Admin.tsx`
-- I `generateReport()` (rad 308-348): Efter lyckad generering, invalidera React Query-cachen for `todays-report` och `reports`
-- I `scrapeNews()` (rad 390-428): Efter lyckad skrapning, invalidera React Query-cachen for `news`
-- Importera `useQueryClient` fran `@tanstack/react-query`
+## Del 2: SEO-vanliga URL:er for nyheter
 
-### Sammanfattning av ändringar
-- 2 filer ändras
-- Ingen ny databas-migration
-- Ingen ny edge function
+### Problem
+URL:er som `/nyhet/7e7523af-294c-4256-ac8e-60edc5ccc7e0` ar daliga for SEO. Bor vara `/nyhet/xrp-dominerar-sydkoreansk-kryptohandel`.
+
+### Losning
+Lagg till en `slug`-kolumn i `news`-tabellen och anvand den i alla lankar.
+
+### Andringar
+
+**Databasmigration**
+- Lagg till kolumn `slug` (text, unique) pa `news`-tabellen
+- Generera sluggar for alla befintliga nyheter baserat pa titel (ta bort svenska tecken, gemener, bindestreck)
+- Skapa ett unique index pa `slug`
+
+**`supabase/functions/scrape-crypto-news/index.ts`**
+- Generera slug fran den svenska titeln vid insert (funktion som konverterar "XRP Dominerar Kryptohandel" till "xrp-dominerar-kryptohandel")
+- Lagg till slug i upsert-anropet
+
+**`src/hooks/useNews.ts`**
+- Uppdatera `useNewsItem` att soka pa `slug` istallet for `id`
+- Inkludera `slug` i alla queries select-listor
+
+**`src/App.tsx`**
+- Andra route fran `/nyhet/:id` till `/nyhet/:slug`
+
+**`src/pages/NewsDetail.tsx`**
+- Anvanda `slug`-param istallet for `id`
+- Uppdatera canonical URL och delningslank
+
+**`src/components/NewsSection.tsx`**
+- Anka till `/nyhet/${item.slug}` istallet for `/nyhet/${item.id}`
+
+**`src/components/NewsArchiveSection.tsx`**
+- Samma andring som NewsSection
+
+**`src/components/Footer.tsx`**
+- Samma andring
+
+**`supabase/functions/generate-sitemap/index.ts`**
+- Hamta `slug` i select fran news
+- Anvand `/nyhet/${item.slug}` i sitemap-URL:erna
+
+---
+
+## Teknisk detalj: Slug-generering
+
+Funktion som kors bade i migrationen (SQL) och i edge function (TypeScript):
+- Konvertera till gemener
+- Ersatt a/a/o med a/a/o (svenska tecken)
+- Ta bort allt utom bokstaver, siffror, mellanslag
+- Ersatt mellanslag med bindestreck
+- Max 80 tecken
+- Exempel: "XRP Dominerar Sydkoreansk Kryptohandel" blir "xrp-dominerar-sydkoreansk-kryptohandel"
+
+---
+
+## Sammanfattning
+- 1 databasmigration (ny kolumn + backfill)
+- 2 edge functions andras (generate-weekly-report, scrape-crypto-news)
+- 1 edge function uppdateras (generate-sitemap)
+- 5 frontend-filer andras (App, NewsDetail, NewsSection, NewsArchiveSection, Footer)
+- 1 frontend-fil andras (Admin.tsx - weekly report trigger)
+
