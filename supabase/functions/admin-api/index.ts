@@ -285,10 +285,18 @@ serve(async (req) => {
     // Trigger report generation manually
     if (action === 'generate-report' && req.method === 'POST') {
       const response = await fetch(`${supabaseUrl}/functions/v1/generate-daily-report`, {
-        headers: { Authorization: `Bearer ${supabaseKey}` },
+        headers: { Authorization: authHeader },
       });
       
       const result = await response.json();
+      
+      if (!response.ok) {
+        console.error('generate-daily-report failed:', response.status, result);
+        return new Response(JSON.stringify({ error: result.error || 'Report generation failed' }), {
+          status: response.status,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
       
       return new Response(JSON.stringify(result), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

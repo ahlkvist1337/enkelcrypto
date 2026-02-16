@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { z } from "zod";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
+import { useQueryClient } from "@tanstack/react-query";
 
 const affiliateLinkSchema = z.object({
   name: z.string()
@@ -56,6 +57,7 @@ export default function Admin() {
   const [healthChecks, setHealthChecks] = useState<HealthCheck[]>([]);
   const [runningHealthCheck, setRunningHealthCheck] = useState(false);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     loadAffiliateLinks();
@@ -330,7 +332,13 @@ export default function Admin() {
         },
       });
 
-      if (!response.ok) throw new Error('Failed to generate');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(errorData.error || 'Failed to generate');
+      }
+      
+      await queryClient.invalidateQueries({ queryKey: ["todays-report"] });
+      await queryClient.invalidateQueries({ queryKey: ["reports"] });
       
       toast({
         title: "Genererad!",
@@ -411,6 +419,9 @@ export default function Admin() {
       });
 
       if (!response.ok) throw new Error('Failed to scrape news');
+      
+      await queryClient.invalidateQueries({ queryKey: ["news"] });
+      await queryClient.invalidateQueries({ queryKey: ["news-archive"] });
       
       toast({
         title: "Lyckades!",
