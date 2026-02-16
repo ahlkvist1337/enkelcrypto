@@ -44,6 +44,33 @@ export type Database = {
         }
         Relationships: []
       }
+      health_check_log: {
+        Row: {
+          checked_at: string
+          error_message: string | null
+          function_name: string
+          id: string
+          is_healthy: boolean
+          status_code: number | null
+        }
+        Insert: {
+          checked_at?: string
+          error_message?: string | null
+          function_name: string
+          id?: string
+          is_healthy?: boolean
+          status_code?: number | null
+        }
+        Update: {
+          checked_at?: string
+          error_message?: string | null
+          function_name?: string
+          id?: string
+          is_healthy?: boolean
+          status_code?: number | null
+        }
+        Relationships: []
+      }
       market_movers: {
         Row: {
           ai_comment: string | null
@@ -283,6 +310,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cleanup_old_health_checks: { Args: never; Returns: undefined }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
