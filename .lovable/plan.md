@@ -1,89 +1,46 @@
 
 
-# Plan: Veckorapport-fix + SEO-vanliga URL:er for nyheter
+# Fix: Dubbletter vid nyhetsskrapning + Ta-bort-knapp for admin
 
-## Del 1: Veckorapport -- force-stod med forra veckans datum
+## Problem 1: Dubbletter
+Skraparen tar alltid den senaste artikeln fran CryptoCompare. Vid tva snabba klick hamtas samma engelska artikel, men AI:n kan generera lite olika svenska titlar varje gang. Eftersom dublettkontroll (`onConflict`) bara kollar `title`, slinker den andra igenom.
 
-### Problem
-Funktionen avbryter om det inte ar sondag, och satter dagens datum pa rapporten. Nar admin manuellt vill generera ska den anvanda forra sondagen som slutdatum och veckan dessforinnan som startdatum.
-
-### Andringar
-
-**`supabase/functions/generate-weekly-report/index.ts`**
-- Lasa `force`-parameter fran request body
-- Om `force: true`: hoppa over sondagskontroll
-- Berakna "senaste sondag" som rapportens slutdatum (om idag ar onsdag 19/2, anvand sondag 16/2)
-- Berakna en vecka tillbaka fran den sondagen som startdatum (9/2)
-- Anvanda dessa datum for titel, datahamtning och `date`-faltet i databasen
-
-**`src/pages/Admin.tsx`**
-- Skicka `{ force: true }` i body vid manuellt anrop
-- Invalidera `["reports"]` och `["weekly-reports"]` efter lyckad generering
-- Visa backend-felmeddelanden i toast
+## Problem 2: Ingen mojlighet att ta bort nyheter
+Det finns idag inget satt att radera felaktiga nyheter fran frontenden.
 
 ---
 
-## Del 2: SEO-vanliga URL:er for nyheter
+## Tekniska andringar
 
-### Problem
-URL:er som `/nyhet/7e7523af-294c-4256-ac8e-60edc5ccc7e0` ar daliga for SEO. Bor vara `/nyhet/xrp-dominerar-sydkoreansk-kryptohandel`.
+### 1. `supabase/functions/scrape-crypto-news/index.ts`
+- Fore AI-anropet: kontrollera om `source_url` redan finns i `news`-tabellen
+- Om den finns, hoppa over artikeln och logga att den ar en dubblett
+- Detta forhindrar dubbletter oavsett vad AI:n genererar for titel
 
-### Losning
-Lagg till en `slug`-kolumn i `news`-tabellen och anvand den i alla lankar.
+### 2. `supabase/functions/admin-api/index.ts`
+- Lagg till en ny action `delete-news` (metod DELETE eller POST)
+- Tar emot `newsId` i request body
+- Validerar att det ar ett giltigt UUID
+- Raderar nyheten fran `news`-tabellen med service role key
+- Returnerar bekraftelse eller felmeddelande
 
-### Andringar
+### 3. `src/pages/NewsDetail.tsx`
+- Importera `useAuth` for att kontrollera admin-status
+- Importera `Trash2` ikon fran lucide-react
+- Lagg till en papperskorgsknapp bredvid delningsknapparna (rad 105-118), synlig endast om `isAdmin`
+- Vid klick: visa en bekraftelsedialog ("Ar du saker?")
+- Vid bekraftelse: anropa `admin-api?action=delete-news` med nyhetens ID
+- Vid lyckad radering: navigera tillbaka till `/arkiv?tab=nyheter` och invalidera nyhets-cachen
+- Importera `useNavigate` och `useQueryClient`
 
-**Databasmigration**
-- Lagg till kolumn `slug` (text, unique) pa `news`-tabellen
-- Generera sluggar for alla befintliga nyheter baserat pa titel (ta bort svenska tecken, gemener, bindestreck)
-- Skapa ett unique index pa `slug`
-
-**`supabase/functions/scrape-crypto-news/index.ts`**
-- Generera slug fran den svenska titeln vid insert (funktion som konverterar "XRP Dominerar Kryptohandel" till "xrp-dominerar-kryptohandel")
-- Lagg till slug i upsert-anropet
-
-**`src/hooks/useNews.ts`**
-- Uppdatera `useNewsItem` att soka pa `slug` istallet for `id`
-- Inkludera `slug` i alla queries select-listor
-
-**`src/App.tsx`**
-- Andra route fran `/nyhet/:id` till `/nyhet/:slug`
-
-**`src/pages/NewsDetail.tsx`**
-- Anvanda `slug`-param istallet for `id`
-- Uppdatera canonical URL och delningslank
-
-**`src/components/NewsSection.tsx`**
-- Anka till `/nyhet/${item.slug}` istallet for `/nyhet/${item.id}`
-
-**`src/components/NewsArchiveSection.tsx`**
-- Samma andring som NewsSection
-
-**`src/components/Footer.tsx`**
-- Samma andring
-
-**`supabase/functions/generate-sitemap/index.ts`**
-- Hamta `slug` i select fran news
-- Anvand `/nyhet/${item.slug}` i sitemap-URL:erna
-
----
-
-## Teknisk detalj: Slug-generering
-
-Funktion som kors bade i migrationen (SQL) och i edge function (TypeScript):
-- Konvertera till gemener
-- Ersatt a/a/o med a/a/o (svenska tecken)
-- Ta bort allt utom bokstaver, siffror, mellanslag
-- Ersatt mellanslag med bindestreck
-- Max 80 tecken
-- Exempel: "XRP Dominerar Sydkoreansk Kryptohandel" blir "xrp-dominerar-sydkoreansk-kryptohandel"
+### 4. Ingen databasmigration behovs
+- RLS-policyn tillater redan bara SELECT for publika anvandare
+- Raderingen sker via service role key i admin-api, sa RLS ar inte ett hinder
 
 ---
 
 ## Sammanfattning
-- 1 databasmigration (ny kolumn + backfill)
-- 2 edge functions andras (generate-weekly-report, scrape-crypto-news)
-- 1 edge function uppdateras (generate-sitemap)
-- 5 frontend-filer andras (App, NewsDetail, NewsSection, NewsArchiveSection, Footer)
-- 1 frontend-fil andras (Admin.tsx - weekly report trigger)
+- 3 filer andras
+- Ingen ny databas-migration
+- Ingen ny edge function
 
