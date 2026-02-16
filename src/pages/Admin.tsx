@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, Trash2, RefreshCw } from "lucide-react";
+import { Loader2, Plus, Trash2, RefreshCw, CheckCircle2, XCircle, Activity } from "lucide-react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { supabase } from "@/integrations/supabase/client";
@@ -38,6 +38,14 @@ interface AffiliateLink {
   active: boolean;
 }
 
+interface HealthCheck {
+  function_name: string;
+  status_code: number | null;
+  is_healthy: boolean;
+  error_message: string | null;
+  checked_at: string;
+}
+
 export default function Admin() {
   const [affiliateLinks, setAffiliateLinks] = useState<AffiliateLink[]>([]);
   const [loading, setLoading] = useState(true);
@@ -45,11 +53,62 @@ export default function Admin() {
   const [generatingWeekly, setGeneratingWeekly] = useState(false);
   const [scrapingNews, setScrapingNews] = useState(false);
   const [newLink, setNewLink] = useState({ name: "", url: "", description: "" });
+  const [healthChecks, setHealthChecks] = useState<HealthCheck[]>([]);
+  const [runningHealthCheck, setRunningHealthCheck] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
     loadAffiliateLinks();
+    loadHealthChecks();
   }, []);
+
+  const loadHealthChecks = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('health_check_log')
+        .select('*')
+        .order('checked_at', { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      const latest = new Map<string, HealthCheck>();
+      (data || []).forEach((row: any) => {
+        if (!latest.has(row.function_name)) {
+          latest.set(row.function_name, row as HealthCheck);
+        }
+      });
+      setHealthChecks(Array.from(latest.values()));
+    } catch (error) {
+      console.error('Load health checks error:', error);
+    }
+  };
+
+  const runHealthCheck = async () => {
+    setRunningHealthCheck(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast({ title: "Fel", description: "Du måste vara inloggad", variant: "destructive" });
+        setRunningHealthCheck(false);
+        return;
+      }
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/health-check`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${session.access_token}` },
+      });
+      if (!response.ok) throw new Error('Failed');
+      const result = await response.json();
+      toast({
+        title: result.unhealthy > 0 ? "⚠️ Problem hittade" : "✅ Allt OK",
+        description: `${result.healthy}/${result.total} funktioner är friska`,
+        variant: result.unhealthy > 0 ? "destructive" : "default",
+      });
+      loadHealthChecks();
+    } catch (error) {
+      toast({ title: "Fel", description: "Kunde inte köra hälsokontroll", variant: "destructive" });
+    } finally {
+      setRunningHealthCheck(false);
+    }
+  };
 
   const loadAffiliateLinks = async () => {
     try {
@@ -389,6 +448,45 @@ export default function Admin() {
             <h1 className="text-4xl font-bold text-foreground mb-2">Admin Panel</h1>
             <p className="text-muted-foreground">Hantera affiliatelänkar och inställningar</p>
           </div>
+
+          <Card className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Activity className="h-5 w-5 text-primary" />
+                <h2 className="text-2xl font-bold text-foreground">Systemhälsa</h2>
+              </div>
+              <Button onClick={runHealthCheck} disabled={runningHealthCheck} variant="outline" size="sm">
+                {runningHealthCheck ? (
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Kontrollerar...</>
+                ) : (
+                  <><RefreshCw className="mr-2 h-4 w-4" />Kör kontroll</>
+                )}
+              </Button>
+            </div>
+            {healthChecks.length === 0 ? (
+              <p className="text-muted-foreground text-sm">Ingen hälsodata ännu. Kör en kontroll för att se status.</p>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {healthChecks.map((check) => (
+                  <div key={check.function_name} className="flex items-center gap-3 p-3 border border-border rounded-lg">
+                    {check.is_healthy ? (
+                      <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" />
+                    ) : (
+                      <XCircle className="h-5 w-5 text-destructive shrink-0" />
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-foreground text-sm truncate">{check.function_name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {check.is_healthy ? 'OK' : `Fel: ${check.error_message || `HTTP ${check.status_code}`}`}
+                        {' · '}
+                        {new Date(check.checked_at).toLocaleString('sv-SE')}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
 
         <Card className="p-6">
           <h2 className="text-2xl font-bold text-foreground mb-4">Generera Rapporter</h2>
