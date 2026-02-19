@@ -1,46 +1,41 @@
 
+# Fix: Cron-jobben autentiserar sig inte — CRON_SECRET saknas i databasen
 
-# Fix: Dubbletter vid nyhetsskrapning + Ta-bort-knapp for admin
+## Grundorsak
 
-## Problem 1: Dubbletter
-Skraparen tar alltid den senaste artikeln fran CryptoCompare. Vid tva snabba klick hamtas samma engelska artikel, men AI:n kan generera lite olika svenska titlar varje gang. Eftersom dublettkontroll (`onConflict`) bara kollar `title`, slinker den andra igenom.
+CRON_SECRET finns som edge function-secret men **inte som PostgreSQL-inställning**. Cron-jobben kör SQL i Postgres och kan inte läsa edge function-secrets. De försöker hämta hemligheten via `current_setting('app.settings.cron_secret', true)` men det returnerar NULL — vilket gör att HTTP-headern `X-Cron-Secret` skickas som tom sträng och alla funktioner avvisar anropet med 401.
 
-## Problem 2: Ingen mojlighet att ta bort nyheter
-Det finns idag inget satt att radera felaktiga nyheter fran frontenden.
+Hälsochecken ser grön ut eftersom den bara pingar med OPTIONS-anrop och inte kräver autentisering.
 
----
+## Bevis
 
-## Tekniska andringar
+- `SELECT current_setting('app.settings.cron_secret', true)` → returnerar NULL
+- Inga edge function-anrop från cron syns i loggar sedan 18 februari
+- Senaste nyhet: 18 februari (manuellt skapad)
+- Senaste dagliga rapport: 18 februari (manuellt skapad)
+- CRON_SECRET finns i edge function-secrets men inte i pg_settings
 
-### 1. `supabase/functions/scrape-crypto-news/index.ts`
-- Fore AI-anropet: kontrollera om `source_url` redan finns i `news`-tabellen
-- Om den finns, hoppa over artikeln och logga att den ar en dubblett
-- Detta forhindrar dubbletter oavsett vad AI:n genererar for titel
+## Lösning — en SQL-rad
 
-### 2. `supabase/functions/admin-api/index.ts`
-- Lagg till en ny action `delete-news` (metod DELETE eller POST)
-- Tar emot `newsId` i request body
-- Validerar att det ar ett giltigt UUID
-- Raderar nyheten fran `news`-tabellen med service role key
-- Returnerar bekraftelse eller felmeddelande
+Spara CRON_SECRET-värdet som en PostgreSQL ALTER DATABASE-inställning så att `current_setting()` kan läsa det:
 
-### 3. `src/pages/NewsDetail.tsx`
-- Importera `useAuth` for att kontrollera admin-status
-- Importera `Trash2` ikon fran lucide-react
-- Lagg till en papperskorgsknapp bredvid delningsknapparna (rad 105-118), synlig endast om `isAdmin`
-- Vid klick: visa en bekraftelsedialog ("Ar du saker?")
-- Vid bekraftelse: anropa `admin-api?action=delete-news` med nyhetens ID
-- Vid lyckad radering: navigera tillbaka till `/arkiv?tab=nyheter` och invalidera nyhets-cachen
-- Importera `useNavigate` och `useQueryClient`
+```sql
+ALTER DATABASE postgres SET "app.settings.cron_secret" = '<CRON_SECRET_VÄRDET>';
+```
 
-### 4. Ingen databasmigration behovs
-- RLS-policyn tillater redan bara SELECT for publika anvandare
-- Raderingen sker via service role key i admin-api, sa RLS ar inte ett hinder
+Detta är den enda ändringen som behövs. Inga kod-filer ändras.
 
----
+## Tekniska detaljer
 
-## Sammanfattning
-- 3 filer andras
-- Ingen ny databas-migration
-- Ingen ny edge function
+- Cron-jobben körs redan med rätt SQL-syntax och rätt URL:er
+- Funktionerna har redan korrekt `X-Cron-Secret`-validering
+- Det enda som fattas är att `current_setting('app.settings.cron_secret', true)` returnerar ett verkligt värde
 
+## Vad som händer efter fixet
+
+- Nästa körning kl 18:00 UTC skapas dagens dagliga rapport automatiskt
+- Nyheter skrapas var 2:e timme igen automatiskt
+- Veckorapporten körs nästa söndag automatiskt
+- Manuella rapporter för 19 februari kan triggas via admin-panelen direkt
+
+## Ingen kod ändras — bara en SQL-sats körs i databasen
