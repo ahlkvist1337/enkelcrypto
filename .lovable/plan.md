@@ -1,41 +1,49 @@
 
-# Fix: Cron-jobben autentiserar sig inte — CRON_SECRET saknas i databasen
+# Rot-orsak och lösning — definitiv
 
-## Grundorsak
+## Vad som faktiskt hänt
 
-CRON_SECRET finns som edge function-secret men **inte som PostgreSQL-inställning**. Cron-jobben kör SQL i Postgres och kan inte läsa edge function-secrets. De försöker hämta hemligheten via `current_setting('app.settings.cron_secret', true)` men det returnerar NULL — vilket gör att HTTP-headern `X-Cron-Secret` skickas som tom sträng och alla funktioner avvisar anropet med 401.
+Cron-jobben för daglig rapport och nyhetsskrapning slutade fungera 5 februari. Orsaken är att `current_setting('app.settings.cron_secret', true)` returnerar NULL i databasen, vilket gör att alla cron-jobb skickar en tom `X-Cron-Secret`-header och får 401 tillbaka.
 
-Hälsochecken ser grön ut eftersom den bara pingar med OPTIONS-anrop och inte kräver autentisering.
+Alla tidigare "fixar" har ändrat cron-jobbens SQL-syntax men inte löst grundproblemet: hemligheten existerar i edge function-miljön men inte i PostgreSQL-databasen.
 
 ## Bevis
 
-- `SELECT current_setting('app.settings.cron_secret', true)` → returnerar NULL
-- Inga edge function-anrop från cron syns i loggar sedan 18 februari
-- Senaste nyhet: 18 februari (manuellt skapad)
-- Senaste dagliga rapport: 18 februari (manuellt skapad)
-- CRON_SECRET finns i edge function-secrets men inte i pg_settings
+- `SELECT current_setting('app.settings.cron_secret', true)` → NULL (bekräftat nu)
+- `report_generation_log`: senaste cron-körning 4 februari. Allt sedan dess manuellt.
+- `news_scrape_log`: senaste cron-körning 5 februari.
+- Edge logs: en 401 registrerad för `generate-daily-report` — cron kör men autentiserar aldrig.
 
-## Lösning — en SQL-rad
+## Den enda ändringen som behövs
 
-Spara CRON_SECRET-värdet som en PostgreSQL ALTER DATABASE-inställning så att `current_setting()` kan läsa det:
+`ALTER DATABASE` är blockerat i Lovable Cloud. Men `ALTER ROLE` fungerar. Den sätter samma inställning fast på roll-nivå istället för databas-nivå — `current_setting()` läser dem på samma sätt.
+
+### Vad som ändras
+
+En enda SQL-sats körs mot databasen via en ny engångsmigration:
 
 ```sql
-ALTER DATABASE postgres SET "app.settings.cron_secret" = '<CRON_SECRET_VÄRDET>';
+ALTER ROLE authenticator SET "app.settings.cron_secret" = '<CRON_SECRET_VÄRDET>';
 ```
 
-Detta är den enda ändringen som behövs. Inga kod-filer ändras.
+Det är allt. Inga kod-filer ändras. Inga nya edge functions. Inga nya admin-knappar. Inga omvägar.
 
-## Tekniska detaljer
+### Varför ALTER ROLE fungerar
 
-- Cron-jobben körs redan med rätt SQL-syntax och rätt URL:er
-- Funktionerna har redan korrekt `X-Cron-Secret`-validering
-- Det enda som fattas är att `current_setting('app.settings.cron_secret', true)` returnerar ett verkligt värde
+PostgreSQL läser `current_setting('app.settings.cron_secret')` från session-inställningar. Dessa kan sättas på databas-, roll- eller session-nivå. `ALTER DATABASE` är blockerat, men `ALTER ROLE authenticator` (rollen som pg_cron och pg_net använder för att köra SQL) är tillåtet.
 
-## Vad som händer efter fixet
+### Tekniska detaljer
 
-- Nästa körning kl 18:00 UTC skapas dagens dagliga rapport automatiskt
-- Nyheter skrapas var 2:e timme igen automatiskt
-- Veckorapporten körs nästa söndag automatiskt
-- Manuella rapporter för 19 februari kan triggas via admin-panelen direkt
+- Filen `supabase/migrations/` — en ny migrationsfil med `ALTER ROLE` SQL
+- Ingen kod i edge functions ändras
+- Cron-jobben är redan korrekt konfigurerade med rätt URL:er och `current_setting()`-syntax
+- När migrationen körs börjar `current_setting()` returnera rätt värde vid nästa cron-körning
 
-## Ingen kod ändras — bara en SQL-sats körs i databasen
+### Vad som händer efter
+
+- Kl 18:00 UTC idag (eller nästa körning) genereras daglig rapport automatiskt
+- Var 2:e timme skrapas nyheter automatiskt igen  
+- Nästa söndag kl 18:00 UTC körs veckorapporten
+- Rapporterna för 19–20 februari kan triggas manuellt via admin-panelen direkt efteråt
+
+### Inga kod-ändringar — bara en SQL-rad i en migrationsfil
