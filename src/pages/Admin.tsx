@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, Trash2, RefreshCw, CheckCircle2, XCircle, Activity } from "lucide-react";
+import { Loader2, Plus, Trash2, RefreshCw, CheckCircle2, XCircle, Activity, Zap } from "lucide-react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { supabase } from "@/integrations/supabase/client";
@@ -53,6 +53,8 @@ export default function Admin() {
   const [generating, setGenerating] = useState(false);
   const [generatingWeekly, setGeneratingWeekly] = useState(false);
   const [scrapingNews, setScrapingNews] = useState(false);
+  const [activatingCron, setActivatingCron] = useState(false);
+  const [cronActivated, setCronActivated] = useState(false);
   const [newLink, setNewLink] = useState({ name: "", url: "", description: "" });
   const [healthChecks, setHealthChecks] = useState<HealthCheck[]>([]);
   const [runningHealthCheck, setRunningHealthCheck] = useState(false);
@@ -445,6 +447,29 @@ export default function Admin() {
     }
   };
 
+  const activateCronSecret = async () => {
+    setActivatingCron(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast({ title: "Fel", description: "Du måste vara inloggad", variant: "destructive" });
+        return;
+      }
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/set-cron-secret`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${session.access_token}` },
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed');
+      setCronActivated(true);
+      toast({ title: "✅ Klar!", description: "Automatik är nu aktiverad. Nästa körning sker enligt schema." });
+    } catch (error) {
+      toast({ title: "Fel", description: error instanceof Error ? error.message : "Kunde inte aktivera automatik", variant: "destructive" });
+    } finally {
+      setActivatingCron(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex flex-col">
@@ -488,7 +513,7 @@ export default function Admin() {
                 {healthChecks.map((check) => (
                   <div key={check.function_name} className="flex items-center gap-3 p-3 border border-border rounded-lg">
                     {check.is_healthy ? (
-                      <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" />
+                      <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />
                     ) : (
                       <XCircle className="h-5 w-5 text-destructive shrink-0" />
                     )}
@@ -505,6 +530,29 @@ export default function Admin() {
               </div>
             )}
           </Card>
+
+        <Card className="p-6 border-primary/30 bg-primary/5">
+          <div className="flex items-center gap-2 mb-3">
+            <Zap className="h-5 w-5 text-primary" />
+            <h2 className="text-xl font-bold text-foreground">Aktivera Automatik</h2>
+          </div>
+          <p className="text-sm text-muted-foreground mb-4">
+            Cron-jobben behöver känna till din API-nyckel för att kunna autentisera sig. Tryck på knappen nedan för att synkronisera nyckeln — detta behöver bara göras en gång.
+          </p>
+          {cronActivated && (
+            <div className="flex items-center gap-2 mb-4 p-3 rounded-lg bg-primary/10 border border-primary/20">
+              <CheckCircle2 className="h-4 w-4 text-primary" />
+              <span className="text-sm text-foreground font-medium">Automatik aktiverad — cron-jobben autentiserar nu korrekt.</span>
+            </div>
+          )}
+          <Button onClick={activateCronSecret} disabled={activatingCron} variant="default">
+            {activatingCron ? (
+              <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Aktiverar...</>
+            ) : (
+              <><Zap className="mr-2 h-4 w-4" />Aktivera Automatik</>
+            )}
+          </Button>
+        </Card>
 
         <Card className="p-6">
           <h2 className="text-2xl font-bold text-foreground mb-4">Generera Rapporter</h2>
