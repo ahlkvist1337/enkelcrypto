@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.health-check]
 verify_jwt = false
+
+[functions.set-cron-secret]
+verify_jwt = false
