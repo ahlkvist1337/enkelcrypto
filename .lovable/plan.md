@@ -1,49 +1,35 @@
 
-# Rot-orsak och lösning — definitiv
 
-## Vad som faktiskt hänt
+# Crypto-donationer på EnkelCrypto
 
-Cron-jobben för daglig rapport och nyhetsskrapning slutade fungera 5 februari. Orsaken är att `current_setting('app.settings.cron_secret', true)` returnerar NULL i databasen, vilket gör att alla cron-jobb skickar en tom `X-Cron-Secret`-header och får 401 tillbaka.
+Lägga till en donationssektion med BTC- och ETH-adresser, plus möjlighet för traditionella donationer.
 
-Alla tidigare "fixar" har ändrat cron-jobbens SQL-syntax men inte löst grundproblemet: hemligheten existerar i edge function-miljön men inte i PostgreSQL-databasen.
+## Vad som byggs
 
-## Bevis
+1. **Ny komponent `DonationSection.tsx`** — En card-baserad sektion med:
+   - BTC-adress med kopiera-knapp och QR-kod (genererad via inline SVG eller en liten lib)
+   - ETH-adress med kopiera-knapp och QR-kod
+   - Visuellt tilltalande med crypto-ikoner
+   - "Kopierad!"-feedback via toast
 
-- `SELECT current_setting('app.settings.cron_secret', true)` → NULL (bekräftat nu)
-- `report_generation_log`: senaste cron-körning 4 februari. Allt sedan dess manuellt.
-- `news_scrape_log`: senaste cron-körning 5 februari.
-- Edge logs: en 401 registrerad för `generate-daily-report` — cron kör men autentiserar aldrig.
+2. **Admin-hantering av adresser** — Adresserna lagras i `site_settings`-tabellen (redan finns) med nycklarna `btc_donation_address` och `eth_donation_address`, redigeringsbara via admin-panelen.
 
-## Den enda ändringen som behövs
+3. **Placering** — Sektionen visas på startsidan (`Index.tsx`) ovanför footer, samt på Om-sidan (`About.tsx`).
 
-`ALTER DATABASE` är blockerat i Lovable Cloud. Men `ALTER ROLE` fungerar. Den sätter samma inställning fast på roll-nivå istället för databas-nivå — `current_setting()` läser dem på samma sätt.
+4. **SQL migration** — Sätta in default-värden i `site_settings` för BTC/ETH-adresser (tomma initialt, admin fyller i).
 
-### Vad som ändras
+## Tekniska detaljer
 
-En enda SQL-sats körs mot databasen via en ny engångsmigration:
+- QR-koder genereras med en liten inline-lösning (canvas-baserat eller `qrcode`-paket) för att slippa externa tjänster
+- Kopiering via `navigator.clipboard.writeText()`
+- Hämtar adresser från `site_settings` via Supabase query (publik read, admin write)
+- Admin-panelen får ett nytt fält under inställningar för att redigera adresserna
 
-```sql
-ALTER ROLE authenticator SET "app.settings.cron_secret" = '<CRON_SECRET_VÄRDET>';
-```
+## Filer som ändras/skapas
 
-Det är allt. Inga kod-filer ändras. Inga nya edge functions. Inga nya admin-knappar. Inga omvägar.
+- `src/components/DonationSection.tsx` — ny
+- `src/pages/Index.tsx` — lägg till DonationSection
+- `src/pages/About.tsx` — lägg till DonationSection
+- `src/pages/Admin.tsx` — fält för att redigera BTC/ETH-adresser
+- SQL migration — insert default site_settings-rader
 
-### Varför ALTER ROLE fungerar
-
-PostgreSQL läser `current_setting('app.settings.cron_secret')` från session-inställningar. Dessa kan sättas på databas-, roll- eller session-nivå. `ALTER DATABASE` är blockerat, men `ALTER ROLE authenticator` (rollen som pg_cron och pg_net använder för att köra SQL) är tillåtet.
-
-### Tekniska detaljer
-
-- Filen `supabase/migrations/` — en ny migrationsfil med `ALTER ROLE` SQL
-- Ingen kod i edge functions ändras
-- Cron-jobben är redan korrekt konfigurerade med rätt URL:er och `current_setting()`-syntax
-- När migrationen körs börjar `current_setting()` returnera rätt värde vid nästa cron-körning
-
-### Vad som händer efter
-
-- Kl 18:00 UTC idag (eller nästa körning) genereras daglig rapport automatiskt
-- Var 2:e timme skrapas nyheter automatiskt igen  
-- Nästa söndag kl 18:00 UTC körs veckorapporten
-- Rapporterna för 19–20 februari kan triggas manuellt via admin-panelen direkt efteråt
-
-### Inga kod-ändringar — bara en SQL-rad i en migrationsfil
