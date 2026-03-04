@@ -2,6 +2,7 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { SEOHead } from "@/components/SEOHead";
 import { Card } from "@/components/ui/card";
+import { DonationSection } from "@/components/DonationSection";
 
 const About = () => {
   return (
@@ -61,6 +62,9 @@ const About = () => {
               </div>
             </div>
           </Card>
+          <div className="max-w-3xl mx-auto mt-8">
+            <DonationSection />
+          </div>
         </div>
       </main>
       <Footer />

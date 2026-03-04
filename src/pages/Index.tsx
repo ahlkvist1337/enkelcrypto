@@ -6,6 +6,7 @@ import { WinnersLosers } from "@/components/WinnersLosers";
 import { NewsSection } from "@/components/NewsSection";
 import { AffiliateLinks } from "@/components/AffiliateLinks";
 import { PriceChart } from "@/components/PriceChart";
+import { DonationSection } from "@/components/DonationSection";
 import { SEOHead } from "@/components/SEOHead";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
 import { useTodaysReport, useMarketMovers, useCryptoMarketData } from "@/hooks/useCryptoData";
@@ -39,6 +40,7 @@ const Index = () => {
             <WinnersLosers movers={movers} isLoading={moversLoading && !moversError} />
             <AffiliateLinks />
             <NewsSection />
+            <DonationSection />
           </div>
         </main>
         <Footer />
