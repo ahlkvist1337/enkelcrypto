@@ -1,35 +1,18 @@
 
 
-# Crypto-donationer på EnkelCrypto
+# Snyggare donationssektion
 
-Lägga till en donationssektion med BTC- och ETH-adresser, plus möjlighet för traditionella donationer.
+Nuvarande design är funktionell men visuellt platt. Förbättringar:
 
-## Vad som byggs
+## Ändringar i `src/components/DonationSection.tsx`
 
-1. **Ny komponent `DonationSection.tsx`** — En card-baserad sektion med:
-   - BTC-adress med kopiera-knapp och QR-kod (genererad via inline SVG eller en liten lib)
-   - ETH-adress med kopiera-knapp och QR-kod
-   - Visuellt tilltalande med crypto-ikoner
-   - "Kopierad!"-feedback via toast
+1. **Större QR-koder** (160px istället för 120px) med vit padding/ram runt dem
+2. **Gradient-accenter** — subtil gradient-bakgrund på varje crypto-kort (orange-ton för BTC, blå-ton för ETH)
+3. **Bättre typografi** — adressen visas trunkerad med ellipsis istället för break-all, full adress i tooltip
+4. **Hover-effekt** på korten — lätt scale + shadow vid hover
+5. **Snyggare kopiera-knapp** — fylld variant istället för outline, med tydligare feedback
+6. **Ikon-förbättring** — färgade cirkelbakgrunder bakom crypto-ikonerna
+7. **Responsiv layout** — bättre spacing och centrering på mobil
 
-2. **Admin-hantering av adresser** — Adresserna lagras i `site_settings`-tabellen (redan finns) med nycklarna `btc_donation_address` och `eth_donation_address`, redigeringsbara via admin-panelen.
-
-3. **Placering** — Sektionen visas på startsidan (`Index.tsx`) ovanför footer, samt på Om-sidan (`About.tsx`).
-
-4. **SQL migration** — Sätta in default-värden i `site_settings` för BTC/ETH-adresser (tomma initialt, admin fyller i).
-
-## Tekniska detaljer
-
-- QR-koder genereras med en liten inline-lösning (canvas-baserat eller `qrcode`-paket) för att slippa externa tjänster
-- Kopiering via `navigator.clipboard.writeText()`
-- Hämtar adresser från `site_settings` via Supabase query (publik read, admin write)
-- Admin-panelen får ett nytt fält under inställningar för att redigera adresserna
-
-## Filer som ändras/skapas
-
-- `src/components/DonationSection.tsx` — ny
-- `src/pages/Index.tsx` — lägg till DonationSection
-- `src/pages/About.tsx` — lägg till DonationSection
-- `src/pages/Admin.tsx` — fält för att redigera BTC/ETH-adresser
-- SQL migration — insert default site_settings-rader
+Bara en fil ändras: `src/components/DonationSection.tsx`.
 
