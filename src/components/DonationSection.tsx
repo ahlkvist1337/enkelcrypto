@@ -4,19 +4,26 @@ import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { Copy, Check, Bitcoin, Coins } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
-const QRCode = ({ value, size = 128 }: { value: string; size?: number }) => {
-  // Simple QR placeholder using a free API (no external lib needed)
+const QRCode = ({ value, size = 160 }: { value: string; size?: number }) => {
   if (!value) return null;
   return (
-    <img
-      src={`https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(value)}&bgcolor=ffffff&color=000000&margin=1`}
-      alt={`QR-kod för ${value}`}
-      width={size}
-      height={size}
-      className="rounded-md"
-      loading="lazy"
-    />
+    <div className="rounded-xl bg-white p-3 shadow-sm">
+      <img
+        src={`https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(value)}&bgcolor=ffffff&color=000000&margin=1`}
+        alt={`QR-kod för ${value}`}
+        width={size}
+        height={size}
+        className="rounded-md"
+        loading="lazy"
+      />
+    </div>
   );
 };
 
@@ -35,11 +42,21 @@ const CopyButton = ({ text }: { text: string }) => {
   }, [text]);
 
   return (
-    <Button variant="outline" size="sm" onClick={handleCopy} className="gap-1.5">
+    <Button
+      variant={copied ? "secondary" : "default"}
+      size="sm"
+      onClick={handleCopy}
+      className="gap-1.5 transition-all duration-200"
+    >
       {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-      {copied ? "Kopierad" : "Kopiera"}
+      {copied ? "Kopierad!" : "Kopiera adress"}
     </Button>
   );
+};
+
+const truncateAddress = (addr: string) => {
+  if (addr.length <= 16) return addr;
+  return `${addr.slice(0, 8)}...${addr.slice(-8)}`;
 };
 
 export const DonationSection = () => {
@@ -66,46 +83,68 @@ export const DonationSection = () => {
   if (loading || (!btcAddress && !ethAddress)) return null;
 
   return (
-    <Card className="border-primary/20">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-xl flex items-center gap-2">
-          <Coins className="h-5 w-5 text-primary" />
-          Stöd EnkelCrypto
-        </CardTitle>
-        <p className="text-sm text-muted-foreground">
-          Gillar du EnkelCrypto? Stöd oss genom en donation!
-        </p>
-      </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          {btcAddress && (
-            <div className="flex flex-col items-center gap-3 p-4 rounded-lg bg-muted/40 border border-border">
-              <div className="flex items-center gap-2 text-foreground font-semibold">
-                <Bitcoin className="h-5 w-5 text-[hsl(36,100%,50%)]" />
-                Bitcoin (BTC)
-              </div>
-              <QRCode value={`bitcoin:${btcAddress}`} size={120} />
-              <code className="text-xs text-muted-foreground break-all text-center max-w-[200px]">
-                {btcAddress}
-              </code>
-              <CopyButton text={btcAddress} />
+    <TooltipProvider>
+      <Card className="border-primary/20 overflow-hidden">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-xl flex items-center gap-2">
+            <div className="flex items-center justify-center h-8 w-8 rounded-full bg-primary/10">
+              <Coins className="h-4.5 w-4.5 text-primary" />
             </div>
-          )}
-          {ethAddress && (
-            <div className="flex flex-col items-center gap-3 p-4 rounded-lg bg-muted/40 border border-border">
-              <div className="flex items-center gap-2 text-foreground font-semibold">
-                <Coins className="h-5 w-5 text-[hsl(231,55%,60%)]" />
-                Ethereum (ETH)
+            Stöd EnkelCrypto
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Gillar du EnkelCrypto? Stöd oss genom en kryptodonation!
+          </p>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            {btcAddress && (
+              <div className="group flex flex-col items-center gap-4 p-5 rounded-xl border border-border bg-gradient-to-br from-[hsl(36,100%,97%)] to-[hsl(36,80%,92%)] dark:from-[hsl(36,40%,14%)] dark:to-[hsl(36,30%,10%)] transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-[hsl(36,100%,50%)]/10">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex items-center justify-center h-9 w-9 rounded-full bg-[hsl(36,100%,50%)]/15">
+                    <Bitcoin className="h-5 w-5 text-[hsl(36,100%,50%)]" />
+                  </div>
+                  <span className="font-semibold text-foreground">Bitcoin (BTC)</span>
+                </div>
+                <QRCode value={`bitcoin:${btcAddress}`} size={160} />
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <code className="text-xs text-muted-foreground font-mono cursor-default">
+                      {truncateAddress(btcAddress)}
+                    </code>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="max-w-[300px] break-all font-mono text-xs">
+                    {btcAddress}
+                  </TooltipContent>
+                </Tooltip>
+                <CopyButton text={btcAddress} />
               </div>
-              <QRCode value={`ethereum:${ethAddress}`} size={120} />
-              <code className="text-xs text-muted-foreground break-all text-center max-w-[200px]">
-                {ethAddress}
-              </code>
-              <CopyButton text={ethAddress} />
-            </div>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+            )}
+            {ethAddress && (
+              <div className="group flex flex-col items-center gap-4 p-5 rounded-xl border border-border bg-gradient-to-br from-[hsl(231,55%,97%)] to-[hsl(231,45%,92%)] dark:from-[hsl(231,30%,14%)] dark:to-[hsl(231,25%,10%)] transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-[hsl(231,55%,60%)]/10">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex items-center justify-center h-9 w-9 rounded-full bg-[hsl(231,55%,60%)]/15">
+                    <Coins className="h-5 w-5 text-[hsl(231,55%,60%)]" />
+                  </div>
+                  <span className="font-semibold text-foreground">Ethereum (ETH)</span>
+                </div>
+                <QRCode value={`ethereum:${ethAddress}`} size={160} />
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <code className="text-xs text-muted-foreground font-mono cursor-default">
+                      {truncateAddress(ethAddress)}
+                    </code>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="max-w-[300px] break-all font-mono text-xs">
+                    {ethAddress}
+                  </TooltipContent>
+                </Tooltip>
+                <CopyButton text={ethAddress} />
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    </TooltipProvider>
   );
 };
