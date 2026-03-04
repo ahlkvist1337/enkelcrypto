@@ -58,13 +58,53 @@ export default function Admin() {
   const [newLink, setNewLink] = useState({ name: "", url: "", description: "" });
   const [healthChecks, setHealthChecks] = useState<HealthCheck[]>([]);
   const [runningHealthCheck, setRunningHealthCheck] = useState(false);
+  const [btcAddress, setBtcAddress] = useState("");
+  const [ethAddress, setEthAddress] = useState("");
+  const [savingDonation, setSavingDonation] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   useEffect(() => {
     loadAffiliateLinks();
     loadHealthChecks();
+    loadDonationAddresses();
   }, []);
+
+  const loadDonationAddresses = async () => {
+    const { data } = await supabase
+      .from("site_settings")
+      .select("key, value")
+      .in("key", ["btc_donation_address", "eth_donation_address"]);
+    data?.forEach((row) => {
+      if (row.key === "btc_donation_address") setBtcAddress(row.value);
+      if (row.key === "eth_donation_address") setEthAddress(row.value);
+    });
+  };
+
+  const saveDonationAddresses = async () => {
+    setSavingDonation(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast({ title: "Fel", description: "Du måste vara inloggad", variant: "destructive" });
+        return;
+      }
+      const { error: e1 } = await supabase
+        .from("site_settings")
+        .update({ value: btcAddress })
+        .eq("key", "btc_donation_address");
+      const { error: e2 } = await supabase
+        .from("site_settings")
+        .update({ value: ethAddress })
+        .eq("key", "eth_donation_address");
+      if (e1 || e2) throw new Error("Kunde inte spara");
+      toast({ title: "Sparat!", description: "Donationsadresser uppdaterade" });
+    } catch (error) {
+      toast({ title: "Fel", description: error instanceof Error ? error.message : "Kunde inte spara", variant: "destructive" });
+    } finally {
+      setSavingDonation(false);
+    }
+  };
 
   const loadHealthChecks = async () => {
     try {
@@ -552,6 +592,40 @@ export default function Admin() {
               <><Zap className="mr-2 h-4 w-4" />Aktivera Automatik</>
             )}
           </Button>
+        </Card>
+
+        <Card className="p-6">
+          <h2 className="text-2xl font-bold text-foreground mb-4">Donationsadresser</h2>
+          <p className="text-sm text-muted-foreground mb-4">
+            Ange BTC- och ETH-adresser som visas på sidan för donationer. Lämna tomt för att dölja.
+          </p>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="btc-addr">Bitcoin (BTC) adress</Label>
+              <Input
+                id="btc-addr"
+                value={btcAddress}
+                onChange={(e) => setBtcAddress(e.target.value)}
+                placeholder="bc1q..."
+              />
+            </div>
+            <div>
+              <Label htmlFor="eth-addr">Ethereum (ETH) adress</Label>
+              <Input
+                id="eth-addr"
+                value={ethAddress}
+                onChange={(e) => setEthAddress(e.target.value)}
+                placeholder="0x..."
+              />
+            </div>
+            <Button onClick={saveDonationAddresses} disabled={savingDonation}>
+              {savingDonation ? (
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Sparar...</>
+              ) : (
+                "Spara adresser"
+              )}
+            </Button>
+          </div>
         </Card>
 
         <Card className="p-6">
