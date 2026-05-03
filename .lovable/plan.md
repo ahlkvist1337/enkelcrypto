@@ -1,18 +1,22 @@
+# Fixa "Kunde inte ladda marknadsdata"
 
+## Orsak
 
-# Snyggare donationssektion
+Klienten (`useCryptoMarketData` i `src/hooks/useCryptoData.ts`) skickar headern `Cache-Control: no-cache`. Det gör att webbläsaren skickar en CORS-preflight (OPTIONS) före själva GET. Edge-funktionen `fetch-crypto-data` listar bara `authorization, x-client-info, apikey, content-type` i `Access-Control-Allow-Headers` — `cache-control` saknas, så preflight avslås och fetch failar med "Failed to fetch".
 
-Nuvarande design är funktionell men visuellt platt. Förbättringar:
+Direktanrop via curl fungerar (200 OK med data), vilket bekräftar att backend och CoinGecko är friska — det är bara CORS i webbläsaren som blockerar.
 
-## Ändringar i `src/components/DonationSection.tsx`
+## Åtgärd
 
-1. **Större QR-koder** (160px istället för 120px) med vit padding/ram runt dem
-2. **Gradient-accenter** — subtil gradient-bakgrund på varje crypto-kort (orange-ton för BTC, blå-ton för ETH)
-3. **Bättre typografi** — adressen visas trunkerad med ellipsis istället för break-all, full adress i tooltip
-4. **Hover-effekt** på korten — lätt scale + shadow vid hover
-5. **Snyggare kopiera-knapp** — fylld variant istället för outline, med tydligare feedback
-6. **Ikon-förbättring** — färgade cirkelbakgrunder bakom crypto-ikonerna
-7. **Responsiv layout** — bättre spacing och centrering på mobil
+Uppdatera `corsHeaders` i `supabase/functions/fetch-crypto-data/index.ts` så att `cache-control` tillåts:
 
-Bara en fil ändras: `src/components/DonationSection.tsx`.
+```ts
+'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, cache-control',
+```
 
+Deploya funktionen. Inga klientändringar behövs — `cache: 'no-store'` + `Cache-Control: no-cache` på klienten är fortsatt önskvärt för att undvika att en transient 404/fel cachas.
+
+## Filer
+
+- `supabase/functions/fetch-crypto-data/index.ts` — utöka `Access-Control-Allow-Headers`
+- Deploya `fetch-crypto-data`
