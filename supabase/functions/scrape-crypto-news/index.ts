@@ -254,32 +254,17 @@ serve(async (req) => {
     // Log start
     await logScrapeAttempt(supabase, 'started', 0, 0, null, attemptNumber);
     
-    // Fetch news from CryptoCompare Free API
-    const newsResponse = await fetchWithTimeout(
-      'https://min-api.cryptocompare.com/data/v2/news/?lang=EN&sortOrder=latest',
-      {
-        headers: {
-          'Accept': 'application/json'
-        }
-      },
-      15000 // 15 second timeout
-    );
-    
-    if (!newsResponse.ok) {
-      throw new Error(`CryptoCompare API error: ${newsResponse.status}`);
+    // Fetch news from RSS sources (no API key required)
+    const allArticles = await fetchRssArticles();
+    console.log(`Found ${allArticles.length} articles from RSS sources`);
+
+    if (allArticles.length === 0) {
+      throw new Error('No articles fetched from any RSS source');
     }
-    
-    const newsData = await newsResponse.json();
-    
-    // Safely handle API response - Data may be undefined or not an array
-    const rawData = newsData?.Data;
-    const allArticles = Array.isArray(rawData) ? rawData : [];
-    
-    console.log(`Found ${allArticles.length} articles from CryptoCompare (raw type: ${typeof rawData})`);
-    
+
     // Filter articles from last 24 hours
     const twentyFourHoursAgo = Date.now() / 1000 - (24 * 60 * 60);
-    const recentArticles = allArticles.filter((article: any) => 
+    const recentArticles = allArticles.filter((article: any) =>
       article.published_on >= twentyFourHoursAgo
     );
     
