@@ -194,6 +194,118 @@ Returnera exakt detta JSON-format:
   return null;
 }
 
+// Strip HTML tags and decode common entities
+function stripHtml(input: string): string {
+  return input
+    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function extractTag(item: string, tag: string): string | null {
+  const re = new RegExp(`<${tag}[^>]*>([\\s\\S]*?)</${tag}>`, 'i');
+  const m = item.match(re);
+  return m ? m[1].trim() : null;
+}
+
+function extractImage(item: string): string | null {
+  const mediaContent = item.match(/<media:content[^>]*url=["']([^"']+)["']/i);
+  if (mediaContent) return mediaContent[1];
+  const mediaThumb = item.match(/<media:thumbnail[^>]*url=["']([^"']+)["']/i);
+  if (mediaThumb) return mediaThumb[1];
+  const enclosure = item.match(/<enclosure[^>]*url=["']([^"']+)["'][^>]*type=["']image/i);
+  if (enclosure) return enclosure[1];
+  // Fallback: first <img src=...> in description
+  const desc = extractTag(item, 'description') || '';
+  const img = desc.match(/<img[^>]+src=["']([^"']+)["']/i);
+  return img ? img[1] : null;
+}
+
+interface RssArticle {
+  title: string;
+  body: string;
+  url: string;
+  guid: string;
+  imageurl: string | null;
+  published_on: number; // unix seconds
+}
+
+async function fetchRssFeed(feedUrl: string, sourceName: string): Promise<RssArticle[]> {
+  try {
+    const res = await fetchWithTimeout(feedUrl, {
+      headers: {
+        'Accept': 'application/rss+xml, application/xml, text/xml',
+        'User-Agent': 'Mozilla/5.0 (compatible; EnkelCryptoBot/1.0)'
+      }
+    }, 15000);
+
+    if (!res.ok) {
+      console.error(`${sourceName} RSS error: ${res.status}`);
+      return [];
+    }
+
+    const xml = await res.text();
+    const items = xml.match(/<item[\s\S]*?<\/item>/gi) || [];
+    console.log(`${sourceName}: found ${items.length} items`);
+
+    const articles: RssArticle[] = [];
+    for (const item of items) {
+      const title = stripHtml(extractTag(item, 'title') || '');
+      const link = stripHtml(extractTag(item, 'link') || '');
+      const description = stripHtml(extractTag(item, 'description') || '');
+      const contentEncoded = stripHtml(extractTag(item, 'content:encoded') || '');
+      const pubDate = extractTag(item, 'pubDate') || '';
+      const guid = stripHtml(extractTag(item, 'guid') || link);
+      const imageurl = extractImage(item);
+
+      if (!title || !link) continue;
+
+      const body = contentEncoded.length > description.length ? contentEncoded : description;
+      const ts = pubDate ? Math.floor(new Date(pubDate).getTime() / 1000) : Math.floor(Date.now() / 1000);
+
+      articles.push({
+        title,
+        body: body || title,
+        url: link,
+        guid,
+        imageurl,
+        published_on: isNaN(ts) ? Math.floor(Date.now() / 1000) : ts
+      });
+    }
+    return articles;
+  } catch (error) {
+    console.error(`${sourceName} RSS fetch failed:`, error);
+    return [];
+  }
+}
+
+async function fetchRssArticles(): Promise<RssArticle[]> {
+  // Try CoinDesk first, fall back to CoinTelegraph
+  const sources = [
+    { url: 'https://www.coindesk.com/arc/outboundfeeds/rss/', name: 'CoinDesk' },
+    { url: 'https://cointelegraph.com/rss', name: 'CoinTelegraph' },
+    { url: 'https://decrypt.co/feed', name: 'Decrypt' }
+  ];
+
+  const all: RssArticle[] = [];
+  for (const src of sources) {
+    const articles = await fetchRssFeed(src.url, src.name);
+    all.push(...articles);
+    if (all.length >= 5) break; // enough variety
+  }
+
+  // Sort by published_on desc
+  all.sort((a, b) => b.published_on - a.published_on);
+  return all;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -254,32 +366,17 @@ serve(async (req) => {
     // Log start
     await logScrapeAttempt(supabase, 'started', 0, 0, null, attemptNumber);
     
-    // Fetch news from CryptoCompare Free API
-    const newsResponse = await fetchWithTimeout(
-      'https://min-api.cryptocompare.com/data/v2/news/?lang=EN&sortOrder=latest',
-      {
-        headers: {
-          'Accept': 'application/json'
-        }
-      },
-      15000 // 15 second timeout
-    );
-    
-    if (!newsResponse.ok) {
-      throw new Error(`CryptoCompare API error: ${newsResponse.status}`);
+    // Fetch news from RSS sources (no API key required)
+    const allArticles = await fetchRssArticles();
+    console.log(`Found ${allArticles.length} articles from RSS sources`);
+
+    if (allArticles.length === 0) {
+      throw new Error('No articles fetched from any RSS source');
     }
-    
-    const newsData = await newsResponse.json();
-    
-    // Safely handle API response - Data may be undefined or not an array
-    const rawData = newsData?.Data;
-    const allArticles = Array.isArray(rawData) ? rawData : [];
-    
-    console.log(`Found ${allArticles.length} articles from CryptoCompare (raw type: ${typeof rawData})`);
-    
+
     // Filter articles from last 24 hours
     const twentyFourHoursAgo = Date.now() / 1000 - (24 * 60 * 60);
-    const recentArticles = allArticles.filter((article: any) => 
+    const recentArticles = allArticles.filter((article: any) =>
       article.published_on >= twentyFourHoursAgo
     );
     
