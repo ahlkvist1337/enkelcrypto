@@ -306,7 +306,7 @@ async function fetchRssArticles(): Promise<RssArticle[]> {
   return all;
 }
 
-
+serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
