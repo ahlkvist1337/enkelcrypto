@@ -14,7 +14,7 @@ export const SEOHead = ({
   title = "EnkelCrypto - Daglig kryptosammanfattning på svenska",
   description = "Få en enkel, daglig sammanfattning av kryptomarknaden på svenska. Ingen teknisk jargong, bara klar information om Bitcoin, Ethereum och marknaden.",
   canonical = "https://enkelcrypto.se",
-  ogImage = "https://enkelcrypto.se/og-image.png",
+  ogImage = "https://enkelcrypto.se/og-image.jpg",
   type = "website",
   publishedTime,
   articleType,
