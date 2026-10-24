@@ -1,3 +1,4 @@
+import { formatSwedishDate } from "@/lib/dates";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Card } from "@/components/ui/card";
@@ -115,11 +116,7 @@ const Archive = () => {
                                   Daglig rapport
                                 </Badge>
                                 <span className="text-sm text-muted-foreground">
-                                  {new Date(report.date).toLocaleDateString("sv-SE", {
-                                    year: "numeric",
-                                    month: "long",
-                                    day: "numeric",
-                                  })}
+                                  {formatSwedishDate(report.date)}
                                 </span>
                               </div>
                               <h2 className="text-xl font-semibold text-foreground group-hover:text-primary transition-colors">
