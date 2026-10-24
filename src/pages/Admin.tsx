@@ -5,7 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, Trash2, RefreshCw, CheckCircle2, XCircle, Activity, Zap } from "lucide-react";
+import { Loader2, Plus, Trash2, RefreshCw, CheckCircle2, XCircle, Activity } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AdminOverview } from "@/components/admin/AdminOverview";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { supabase } from "@/integrations/supabase/client";
@@ -53,8 +55,6 @@ export default function Admin() {
   const [generating, setGenerating] = useState(false);
   const [generatingWeekly, setGeneratingWeekly] = useState(false);
   const [scrapingNews, setScrapingNews] = useState(false);
-  const [activatingCron, setActivatingCron] = useState(false);
-  const [cronActivated, setCronActivated] = useState(false);
   const [newLink, setNewLink] = useState({ name: "", url: "", description: "" });
   const [healthChecks, setHealthChecks] = useState<HealthCheck[]>([]);
   const [runningHealthCheck, setRunningHealthCheck] = useState(false);
@@ -487,28 +487,6 @@ export default function Admin() {
     }
   };
 
-  const activateCronSecret = async () => {
-    setActivatingCron(true);
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        toast({ title: "Fel", description: "Du måste vara inloggad", variant: "destructive" });
-        return;
-      }
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/set-cron-secret`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${session.access_token}` },
-      });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error || 'Failed');
-      setCronActivated(true);
-      toast({ title: "✅ Klar!", description: "Automatik är nu aktiverad. Nästa körning sker enligt schema." });
-    } catch (error) {
-      toast({ title: "Fel", description: error instanceof Error ? error.message : "Kunde inte aktivera automatik", variant: "destructive" });
-    } finally {
-      setActivatingCron(false);
-    }
-  };
 
   if (loading) {
     return (
@@ -522,16 +500,7 @@ export default function Admin() {
     );
   }
 
-  return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <Header />
-      <main className="flex-grow py-12 px-4">
-        <div className="max-w-4xl mx-auto space-y-8">
-          <div>
-            <h1 className="text-4xl font-bold text-foreground mb-2">Admin Panel</h1>
-            <p className="text-muted-foreground">Hantera affiliatelänkar och inställningar</p>
-          </div>
-
+  const healthCard = (
           <Card className="p-6">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
@@ -570,30 +539,9 @@ export default function Admin() {
               </div>
             )}
           </Card>
+  );
 
-        <Card className="p-6 border-primary/30 bg-primary/5">
-          <div className="flex items-center gap-2 mb-3">
-            <Zap className="h-5 w-5 text-primary" />
-            <h2 className="text-xl font-bold text-foreground">Aktivera Automatik</h2>
-          </div>
-          <p className="text-sm text-muted-foreground mb-4">
-            Cron-jobben behöver känna till din API-nyckel för att kunna autentisera sig. Tryck på knappen nedan för att synkronisera nyckeln — detta behöver bara göras en gång.
-          </p>
-          {cronActivated && (
-            <div className="flex items-center gap-2 mb-4 p-3 rounded-lg bg-primary/10 border border-primary/20">
-              <CheckCircle2 className="h-4 w-4 text-primary" />
-              <span className="text-sm text-foreground font-medium">Automatik aktiverad — cron-jobben autentiserar nu korrekt.</span>
-            </div>
-          )}
-          <Button onClick={activateCronSecret} disabled={activatingCron} variant="default">
-            {activatingCron ? (
-              <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Aktiverar...</>
-            ) : (
-              <><Zap className="mr-2 h-4 w-4" />Aktivera Automatik</>
-            )}
-          </Button>
-        </Card>
-
+  const donationCard = (
         <Card className="p-6">
           <h2 className="text-2xl font-bold text-foreground mb-4">Donationsadresser</h2>
           <p className="text-sm text-muted-foreground mb-4">
@@ -602,32 +550,47 @@ export default function Admin() {
           <div className="space-y-4">
             <div>
               <Label htmlFor="btc-addr">Bitcoin (BTC) adress</Label>
-              <Input
-                id="btc-addr"
-                value={btcAddress}
-                onChange={(e) => setBtcAddress(e.target.value)}
-                placeholder="bc1q..."
-              />
+              <Input id="btc-addr" value={btcAddress} onChange={(e) => setBtcAddress(e.target.value)} placeholder="bc1q..." />
             </div>
             <div>
               <Label htmlFor="eth-addr">Ethereum (ETH) adress</Label>
-              <Input
-                id="eth-addr"
-                value={ethAddress}
-                onChange={(e) => setEthAddress(e.target.value)}
-                placeholder="0x..."
-              />
+              <Input id="eth-addr" value={ethAddress} onChange={(e) => setEthAddress(e.target.value)} placeholder="0x..." />
             </div>
             <Button onClick={saveDonationAddresses} disabled={savingDonation}>
-              {savingDonation ? (
-                <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Sparar...</>
-              ) : (
-                "Spara adresser"
-              )}
+              {savingDonation ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Sparar...</>) : "Spara adresser"}
             </Button>
           </div>
         </Card>
+  );
 
+  return (
+    <div className="min-h-screen bg-background flex flex-col">
+      <Header />
+      <main className="flex-grow py-12 px-4">
+        <div className="max-w-5xl mx-auto space-y-8">
+          <div>
+            <h1 className="text-4xl font-bold text-foreground mb-2">Admin</h1>
+            <p className="text-muted-foreground">Statistik, innehåll och inställningar för EnkelCrypto</p>
+          </div>
+
+          <Tabs defaultValue="overview" className="space-y-6">
+            <TabsList className="flex flex-wrap h-auto">
+              <TabsTrigger value="overview">Översikt</TabsTrigger>
+              <TabsTrigger value="content">Innehåll</TabsTrigger>
+              <TabsTrigger value="partners">Börser</TabsTrigger>
+              <TabsTrigger value="settings">Inställningar</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="overview">
+              <AdminOverview />
+            </TabsContent>
+
+            <TabsContent value="settings" className="space-y-8">
+              {donationCard}
+              {healthCard}
+            </TabsContent>
+
+            <TabsContent value="content">
         <Card className="p-6">
           <h2 className="text-2xl font-bold text-foreground mb-4">Generera Rapporter</h2>
           <div className="mb-6 p-4 bg-muted/50 rounded-lg">
@@ -692,6 +655,9 @@ export default function Admin() {
             </Button>
           </div>
         </Card>
+            </TabsContent>
+
+            <TabsContent value="partners" className="space-y-8">
 
         <Card className="p-6">
           <h2 className="text-2xl font-bold text-foreground mb-4">Lägg till Affiliatelänk</h2>
@@ -702,7 +668,7 @@ export default function Admin() {
                 id="name"
                 value={newLink.name}
                 onChange={(e) => setNewLink({ ...newLink, name: e.target.value })}
-                placeholder="t.ex. Binance"
+                placeholder="t.ex. Safello"
               />
             </div>
             <div>
@@ -776,6 +742,8 @@ export default function Admin() {
             )}
           </div>
         </Card>
+            </TabsContent>
+          </Tabs>
       </div>
     </main>
     <Footer />
