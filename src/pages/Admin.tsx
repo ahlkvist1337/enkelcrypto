@@ -5,7 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, Trash2, RefreshCw, CheckCircle2, XCircle, Activity, Zap } from "lucide-react";
+import { Loader2, Plus, Trash2, RefreshCw, CheckCircle2, XCircle, Activity } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AdminOverview } from "@/components/admin/AdminOverview";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { supabase } from "@/integrations/supabase/client";
@@ -53,8 +55,6 @@ export default function Admin() {
   const [generating, setGenerating] = useState(false);
   const [generatingWeekly, setGeneratingWeekly] = useState(false);
   const [scrapingNews, setScrapingNews] = useState(false);
-  const [activatingCron, setActivatingCron] = useState(false);
-  const [cronActivated, setCronActivated] = useState(false);
   const [newLink, setNewLink] = useState({ name: "", url: "", description: "" });
   const [healthChecks, setHealthChecks] = useState<HealthCheck[]>([]);
   const [runningHealthCheck, setRunningHealthCheck] = useState(false);
@@ -487,28 +487,6 @@ export default function Admin() {
     }
   };
 
-  const activateCronSecret = async () => {
-    setActivatingCron(true);
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        toast({ title: "Fel", description: "Du måste vara inloggad", variant: "destructive" });
-        return;
-      }
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/set-cron-secret`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${session.access_token}` },
-      });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error || 'Failed');
-      setCronActivated(true);
-      toast({ title: "✅ Klar!", description: "Automatik är nu aktiverad. Nästa körning sker enligt schema." });
-    } catch (error) {
-      toast({ title: "Fel", description: error instanceof Error ? error.message : "Kunde inte aktivera automatik", variant: "destructive" });
-    } finally {
-      setActivatingCron(false);
-    }
-  };
 
   if (loading) {
     return (
@@ -677,6 +655,9 @@ export default function Admin() {
             </Button>
           </div>
         </Card>
+            </TabsContent>
+
+            <TabsContent value="partners" className="space-y-8">
 
         <Card className="p-6">
           <h2 className="text-2xl font-bold text-foreground mb-4">Lägg till Affiliatelänk</h2>
@@ -687,7 +668,7 @@ export default function Admin() {
                 id="name"
                 value={newLink.name}
                 onChange={(e) => setNewLink({ ...newLink, name: e.target.value })}
-                placeholder="t.ex. Binance"
+                placeholder="t.ex. Safello"
               />
             </div>
             <div>
@@ -761,6 +742,8 @@ export default function Admin() {
             )}
           </div>
         </Card>
+            </TabsContent>
+          </Tabs>
       </div>
     </main>
     <Footer />
