@@ -17,7 +17,7 @@ const GuideDetail = () => {
 
   return (
     <>
-      <SEOHead title={guide.title} description={guide.description} canonical={url} type="article" publishedTime={guide.updated} articleType="Article" />
+      <SEOHead title={guide.title} description={guide.description} canonical={url} type="article" publishedTime={guide.updated} />
       {guide.faq && (
         <Helmet>
           <script type="application/ld+json">
