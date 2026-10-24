@@ -1,3 +1,4 @@
+import { formatSwedishDate } from "@/lib/dates";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -76,11 +77,7 @@ export const DailyReport = ({ report, isLoading }: DailyReportProps) => {
               Ny rapport
             </Badge>
             <span className="text-sm text-muted-foreground">
-              {new Date(report.date).toLocaleDateString("sv-SE", {
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-              })}
+              {formatSwedishDate(report.date)}
             </span>
           </div>
           <ShareButtons title={report.title} url={`https://enkelcrypto.se/rapport/daily/${report.date}`} />

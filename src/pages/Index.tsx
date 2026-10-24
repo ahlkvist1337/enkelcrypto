@@ -1,3 +1,4 @@
+import { NewsletterSignup } from "@/components/NewsletterSignup";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { DailyReport } from "@/components/DailyReport";
@@ -38,6 +39,7 @@ const Index = () => {
             />
             <PriceChart />
             <WinnersLosers movers={movers} isLoading={moversLoading && !moversError} />
+            <NewsletterSignup />
             <AffiliateLinks />
             <NewsSection />
             <DonationSection />

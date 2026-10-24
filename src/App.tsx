@@ -14,6 +14,8 @@ import NewsDetail from "./pages/NewsDetail";
 import Admin from "./pages/Admin";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
+import Guides from "./pages/Guides";
+import GuideDetail from "./pages/GuideDetail";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
@@ -32,6 +34,8 @@ const App = () => (
               <Route path="/arkiv" element={<Archive />} />
               <Route path="/veckorapporter" element={<WeeklyReports />} />
               <Route path="/rapport/:type/:date" element={<ReportDetail />} />
+              <Route path="/guider" element={<Guides />} />
+              <Route path="/guide/:slug" element={<GuideDetail />} />
               <Route path="/nyhet/:slug" element={<NewsDetail />} />
               <Route path="/auth" element={<Auth />} />
               <Route

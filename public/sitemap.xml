@@ -3374,4 +3374,24 @@
      <changefreq>monthly</changefreq>
      <priority>0.7</priority>
    </url>
- </urlset>
+   <url>
+    <loc>https://enkelcrypto.se/guider</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://enkelcrypto.se/guide/kopa-krypto-i-sverige-2026</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://enkelcrypto.se/guide/krypto-och-skatt</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://enkelcrypto.se/guide/krypto-ordlista</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+</urlset>

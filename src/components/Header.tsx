@@ -51,6 +51,13 @@ export const Header = () => {
               Veckorapporter
             </NavLink>
             <NavLink
+              to="/guider"
+              className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
+              activeClassName="text-primary"
+            >
+              Guider
+            </NavLink>
+            <NavLink
               to="/om"
               className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
               activeClassName="text-primary"
@@ -130,6 +137,14 @@ export const Header = () => {
               onClick={() => setMobileMenuOpen(false)}
             >
               Veckorapporter
+            </NavLink>
+            <NavLink
+              to="/guider"
+              className="block py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
+              activeClassName="text-primary"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Guider
             </NavLink>
             <NavLink
               to="/om"

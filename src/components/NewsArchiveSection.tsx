@@ -1,3 +1,4 @@
+import { formatSwedishDate } from "@/lib/dates";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -80,11 +81,7 @@ export const NewsArchiveSection = () => {
                           Nyhet
                         </Badge>
                         <span className="text-sm text-muted-foreground">
-                          {new Date(item.date).toLocaleDateString("sv-SE", {
-                            year: "numeric",
-                            month: "long",
-                            day: "numeric",
-                          })}
+                          {formatSwedishDate(item.date)}
                         </span>
                       </div>
                       <h2 className="text-lg font-semibold text-foreground line-clamp-2 group-hover:text-primary transition-colors">

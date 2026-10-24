@@ -1,3 +1,5 @@
+import { NewsletterSignup } from "@/components/NewsletterSignup";
+import { formatSwedishDate, formatWeekRange } from "@/lib/dates";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Card } from "@/components/ui/card";
@@ -34,6 +36,8 @@ const WeeklyReports = () => {
                 Djupare analyser och sammanfattningar av veckans händelser på kryptomarknaden
               </p>
             </div>
+
+            <NewsletterSignup />
 
             {error && (
               <Alert variant="destructive" className="mb-6">
@@ -77,11 +81,7 @@ const WeeklyReports = () => {
                               Veckorapport
                             </Badge>
                             <span className="text-sm text-muted-foreground">
-                              {new Date(report.date).toLocaleDateString("sv-SE", {
-                                year: "numeric",
-                                month: "long",
-                                day: "numeric",
-                              })}
+                              {formatWeekRange(report.date)}
                             </span>
                           </div>
                           <ShareButtons title={report.title} url={`https://enkelcrypto.se/rapport/weekly/${report.date}`} />

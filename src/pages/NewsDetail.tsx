@@ -1,3 +1,4 @@
+import { formatSwedishDate } from "@/lib/dates";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
@@ -36,11 +37,7 @@ const NewsDetail = () => {
   const [isDeleting, setIsDeleting] = useState(false);
 
   const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString("sv-SE", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
+    return formatSwedishDate(dateStr);
   };
 
   const getDescription = (content: string) => {

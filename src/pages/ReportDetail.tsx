@@ -1,3 +1,4 @@
+import { formatSwedishDate } from "@/lib/dates";
 import { useParams, Link } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
@@ -40,11 +41,7 @@ const ReportDetail = () => {
     return DOMPurify.sanitize(withStrong, { ALLOWED_TAGS: ['strong', 'br', 'p', 'em'] });
   };
 
-  const formattedDate = date ? new Date(date).toLocaleDateString("sv-SE", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  }) : '';
+  const formattedDate = date ? formatSwedishDate(date) : '';
 
   const reportUrl = `https://enkelcrypto.se/rapport/${type}/${date}`;
   const isWeekly = type === 'weekly';

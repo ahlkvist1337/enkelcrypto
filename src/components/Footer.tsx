@@ -28,6 +28,7 @@ export const Footer = () => {
               <Link to="/" className="text-muted-foreground hover:text-primary transition-colors">Hem</Link>
               <Link to="/arkiv" className="text-muted-foreground hover:text-primary transition-colors">Arkiv</Link>
               <Link to="/veckorapporter" className="text-muted-foreground hover:text-primary transition-colors">Veckorapporter</Link>
+              <Link to="/guider" className="text-muted-foreground hover:text-primary transition-colors">Guider</Link>
               <Link to="/om" className="text-muted-foreground hover:text-primary transition-colors">Om</Link>
             </div>
           </div>
