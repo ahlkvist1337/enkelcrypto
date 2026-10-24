@@ -1,3 +1,4 @@
+import { NewsletterSignup } from "@/components/NewsletterSignup";
 import { formatSwedishDate, formatWeekRange } from "@/lib/dates";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
@@ -35,6 +36,8 @@ const WeeklyReports = () => {
                 Djupare analyser och sammanfattningar av veckans händelser på kryptomarknaden
               </p>
             </div>
+
+            <NewsletterSignup />
 
             {error && (
               <Alert variant="destructive" className="mb-6">
