@@ -32,9 +32,17 @@ export const AffiliateLinks = () => {
       <h2 className="text-2xl font-bold text-foreground mb-4">
         Rekommenderade Börser
       </h2>
-      <p className="text-sm text-muted-foreground mb-4">
+      <p className="text-sm text-muted-foreground mb-3">
         Handla kryptovalutor säkert hos våra partners
       </p>
+      <div className="mb-4 rounded-lg border border-border bg-muted/40 p-3">
+        <p className="text-sm text-muted-foreground">
+          <span className="font-semibold text-foreground">Obs:</span> Binance
+          lämnade Sverige den 1 juli 2026 och tar inte längre emot svenska
+          kunder. Börserna nedan har MiCA-licens och är tillåtna i Sverige och
+          EU.
+        </p>
+      </div>
       <div className="space-y-3">
         {links.map((link) => (
           <a
