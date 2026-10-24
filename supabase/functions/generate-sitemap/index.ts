@@ -105,6 +105,26 @@ Deno.serve(async (req) => {
      <priority>0.8</priority>
    </url>
    <url>
+     <loc>${baseUrl}/guider</loc>
+     <changefreq>monthly</changefreq>
+     <priority>0.8</priority>
+   </url>
+   <url>
+     <loc>${baseUrl}/guide/kopa-krypto-i-sverige-2026</loc>
+     <changefreq>monthly</changefreq>
+     <priority>0.8</priority>
+   </url>
+   <url>
+     <loc>${baseUrl}/guide/krypto-och-skatt</loc>
+     <changefreq>monthly</changefreq>
+     <priority>0.8</priority>
+   </url>
+   <url>
+     <loc>${baseUrl}/guide/krypto-ordlista</loc>
+     <changefreq>monthly</changefreq>
+     <priority>0.8</priority>
+   </url>
+   <url>
      <loc>${baseUrl}/om</loc>
      <lastmod>${today}</lastmod>
      <changefreq>monthly</changefreq>
