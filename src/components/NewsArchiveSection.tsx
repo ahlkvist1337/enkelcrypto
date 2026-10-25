@@ -5,15 +5,16 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Loader2, AlertCircle, ArrowRight } from "lucide-react";
 import { useNewsArchive, NewsItem } from "@/hooks/useNews";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Link } from "react-router-dom";
 
 const NEWS_PER_PAGE = 10;
 
-export const NewsArchiveSection = () => {
+export const NewsArchiveSection = ({ search = "" }: { search?: string }) => {
   const [offset, setOffset] = useState(0);
-  const { data, isLoading, error } = useNewsArchive(NEWS_PER_PAGE, offset);
+  useEffect(() => { setOffset(0); }, [search]);
+  const { data, isLoading, error } = useNewsArchive(NEWS_PER_PAGE, offset, search);
 
   const news = data?.news || [];
   const totalCount = data?.totalCount || 0;
