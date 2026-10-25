@@ -41,7 +41,7 @@ export const LatestNewsStrip = () => {
           : items.map((item) => (
               <Link key={item.id} to={`/nyhet/${item.slug}`} className="group">
                 <Card className="p-4 h-full flex flex-col gap-2 hover:shadow-md hover:border-primary/40 transition-all">
-                  <span className="text-xs text-muted-foreground">{timeAgo(item.created_at || item.date)}</span>
+                  <span className="text-xs text-muted-foreground">{timeAgo(item.date)}</span>
                   <h3 className="text-sm font-semibold leading-snug line-clamp-2 text-foreground group-hover:text-primary transition-colors">
                     {item.title}
                   </h3>
