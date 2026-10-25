@@ -88,8 +88,9 @@ export const Footer = () => {
             </p>
           </div>
 
-          <div className="text-xs text-muted-foreground">
+          <div className="text-xs text-muted-foreground flex justify-between gap-4">
             <p>© {new Date().getFullYear()} EnkelCrypto. Alla rättigheter förbehållna.</p>
+            <Link to="/auth" className="hover:text-primary transition-colors">Logga in</Link>
           </div>
         </div>
       </div>

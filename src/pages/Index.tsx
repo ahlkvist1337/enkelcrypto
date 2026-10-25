@@ -30,6 +30,10 @@ const Index = () => {
         <Header />
         <main className="flex-grow">
           <div className="container mx-auto px-4 py-8 space-y-8">
+            <div className="space-y-2">
+              <h1 className="text-2xl md:text-3xl font-bold text-foreground">Kryptonyheter och marknadskurser på enkel svenska</h1>
+              <p className="text-muted-foreground">Daglig sammanfattning av bitcoin, ethereum och kryptomarknaden – utan krånglig jargong.</p>
+            </div>
             <DailyReport report={report} isLoading={reportLoading && !reportError} />
             <MarketOverview
               marketData={marketData}

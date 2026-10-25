@@ -1,6 +1,6 @@
 import { NavLink } from "@/components/NavLink";
 import { Button } from "@/components/ui/button";
-import { Menu, Settings, LogOut, User } from "lucide-react";
+import { Menu, Settings, LogOut } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
@@ -85,17 +85,7 @@ export const Header = () => {
                 <LogOut className="h-4 w-4" />
                 Logga ut
               </Button>
-            ) : (
-              <Button
-                variant="default"
-                size="sm"
-                onClick={() => navigate("/auth")}
-                className="flex items-center gap-2"
-              >
-                <User className="h-4 w-4" />
-                Logga in
-              </Button>
-            )}
+            ) : null}
           </nav>
 
           {/* Mobile Menu Button & Theme Toggle */}
@@ -176,18 +166,7 @@ export const Header = () => {
                 <LogOut className="h-4 w-4" />
                 Logga ut
               </button>
-            ) : (
-              <button
-                onClick={() => {
-                  navigate("/auth");
-                  setMobileMenuOpen(false);
-                }}
-                className="block w-full text-left py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-primary flex items-center gap-1"
-              >
-                <User className="h-4 w-4" />
-                Logga in
-              </button>
-            )}
+            ) : null}
           </nav>
         )}
       </div>
