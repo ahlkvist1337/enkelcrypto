@@ -62,6 +62,11 @@ export const NewsArchiveSection = ({ search = "" }: { search?: string }) => {
         <div className="space-y-4">
           {news && news.length > 0 ? (
             <>
+              {search && (
+                <p className="text-sm text-muted-foreground">
+                  Hittade {totalCount} {totalCount === 1 ? "nyhet" : "nyheter"} för "{search}"
+                </p>
+              )}
               {news.map((item) => (
                 <Link key={item.id} to={`/nyhet/${item.slug}`}>
                   <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer group">
@@ -121,7 +126,7 @@ export const NewsArchiveSection = ({ search = "" }: { search?: string }) => {
             </>
           ) : (
             <p className="text-muted-foreground text-center py-12">
-              Inga nyheter tillgängliga ännu.
+              {search ? `Inga nyheter matchade "${search}". Prova ett annat sökord.` : "Inga nyheter tillgängliga ännu."}
             </p>
           )}
         </div>

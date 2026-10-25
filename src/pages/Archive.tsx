@@ -9,7 +9,8 @@ import { SEOHead } from "@/components/SEOHead";
 import { NewsArchiveSection } from "@/components/NewsArchiveSection";
 import { Loader2, AlertCircle, ArrowRight } from "lucide-react";
 import { useReports } from "@/hooks/useCryptoData";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { ArchiveSearch } from "@/components/ArchiveSearch";
 import { useSearchParams, Link } from "react-router-dom";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -21,7 +22,10 @@ const Archive = () => {
   const activeTab = searchParams.get("tab") || "rapporter";
   
   const [offset, setOffset] = useState(0);
-  const { data, isLoading, error } = useReports('daily', REPORTS_PER_PAGE, offset);
+  const [search, setSearch] = useState("");
+  const handleSearch = useCallback((term: string) => setSearch(term), []);
+  useEffect(() => { setOffset(0); }, [search]);
+  const { data, isLoading, error } = useReports('daily', REPORTS_PER_PAGE, offset, search);
 
   const reports = data?.reports || [];
   const totalCount = data?.totalCount || 0;
@@ -66,6 +70,8 @@ const Archive = () => {
               </p>
             </div>
 
+            <ArchiveSearch onSearch={handleSearch} />
+
             <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
               <TabsList className="grid w-full grid-cols-2 mb-6">
                 <TabsTrigger value="rapporter">Rapporter</TabsTrigger>
@@ -107,6 +113,11 @@ const Archive = () => {
                   <div className="space-y-4">
                     {reports && reports.length > 0 ? (
                       <>
+                        {search && (
+                          <p className="text-sm text-muted-foreground">
+                            Hittade {totalCount} {totalCount === 1 ? "rapport" : "rapporter"} för "{search}"
+                          </p>
+                        )}
                         {reports.map((report) => (
                       <Link key={report.id} to={`/rapport/${report.type}/${report.date}`}>
                         <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer group">
@@ -155,7 +166,7 @@ const Archive = () => {
                       </>
                     ) : (
                       <p className="text-muted-foreground text-center py-12">
-                        Inga rapporter tillgängliga ännu.
+                        {search ? `Inga rapporter matchade "${search}". Prova ett annat sökord.` : "Inga rapporter tillgängliga ännu."}
                       </p>
                     )}
                   </div>
@@ -163,7 +174,7 @@ const Archive = () => {
               </TabsContent>
               
               <TabsContent value="nyheter">
-                <NewsArchiveSection />
+                <NewsArchiveSection search={search} />
               </TabsContent>
             </Tabs>
           </div>
