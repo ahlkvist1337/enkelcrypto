@@ -5,15 +5,16 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Loader2, AlertCircle, ArrowRight } from "lucide-react";
 import { useNewsArchive, NewsItem } from "@/hooks/useNews";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Link } from "react-router-dom";
 
 const NEWS_PER_PAGE = 10;
 
-export const NewsArchiveSection = () => {
+export const NewsArchiveSection = ({ search = "" }: { search?: string }) => {
   const [offset, setOffset] = useState(0);
-  const { data, isLoading, error } = useNewsArchive(NEWS_PER_PAGE, offset);
+  useEffect(() => { setOffset(0); }, [search]);
+  const { data, isLoading, error } = useNewsArchive(NEWS_PER_PAGE, offset, search);
 
   const news = data?.news || [];
   const totalCount = data?.totalCount || 0;
@@ -61,6 +62,11 @@ export const NewsArchiveSection = () => {
         <div className="space-y-4">
           {news && news.length > 0 ? (
             <>
+              {search && (
+                <p className="text-sm text-muted-foreground">
+                  Hittade {totalCount} {totalCount === 1 ? "nyhet" : "nyheter"} för "{search}"
+                </p>
+              )}
               {news.map((item) => (
                 <Link key={item.id} to={`/nyhet/${item.slug}`}>
                   <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer group">
@@ -120,7 +126,7 @@ export const NewsArchiveSection = () => {
             </>
           ) : (
             <p className="text-muted-foreground text-center py-12">
-              Inga nyheter tillgängliga ännu.
+              {search ? `Inga nyheter matchade "${search}". Prova ett annat sökord.` : "Inga nyheter tillgängliga ännu."}
             </p>
           )}
         </div>

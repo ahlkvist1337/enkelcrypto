@@ -4,6 +4,7 @@ import { Footer } from "@/components/Footer";
 import { DailyReport } from "@/components/DailyReport";
 import { MarketOverview } from "@/components/MarketOverview";
 import { WinnersLosers } from "@/components/WinnersLosers";
+import { LatestNewsStrip } from "@/components/LatestNewsStrip";
 import { NewsSection } from "@/components/NewsSection";
 import { AffiliateLinks } from "@/components/AffiliateLinks";
 import { PriceChart } from "@/components/PriceChart";
@@ -34,6 +35,7 @@ const Index = () => {
               <h1 className="text-2xl md:text-3xl font-bold text-foreground">Kryptonyheter och marknadskurser på enkel svenska</h1>
               <p className="text-muted-foreground">Daglig sammanfattning av bitcoin, ethereum och kryptomarknaden – utan krånglig jargong.</p>
             </div>
+            <LatestNewsStrip />
             <DailyReport report={report} isLoading={reportLoading && !reportError} />
             <MarketOverview
               marketData={marketData}
