@@ -30,23 +30,19 @@ export const useNews = () => {
   });
 };
 
-export const useNewsArchive = (limit: number = 10, offset: number = 0) => {
+export const useNewsArchive = (limit: number = 10, offset: number = 0, search: string = "") => {
   return useQuery({
-    queryKey: ["news-archive", limit, offset],
+    queryKey: ["news-archive", limit, offset, search],
     queryFn: async () => {
-      // Get total count
-      const { count, error: countError } = await supabase
+      const term = search.trim().replace(/[%,()*]/g, " ");
+      let query = supabase
         .from("news")
-        .select("*", { count: "exact", head: true });
-
-      if (countError) throw countError;
-
-      // Get paginated news
-      const { data, error } = await supabase
-        .from("news")
-        .select("*")
-        .order("date", { ascending: false })
-        .range(offset, offset + limit - 1);
+        .select("*", { count: "exact" })
+        .order("date", { ascending: false });
+      if (term) {
+        query = query.or(`title.ilike.%${term}%,summary.ilike.%${term}%`);
+      }
+      const { data, error, count } = await query.range(offset, offset + limit - 1);
 
       if (error) throw error;
       

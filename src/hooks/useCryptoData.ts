@@ -88,9 +88,9 @@ export const useMarketMovers = () => {
   });
 };
 
-export const useReports = (type?: 'daily' | 'weekly', limit?: number, offset?: number) => {
+export const useReports = (type?: 'daily' | 'weekly', limit?: number, offset?: number, search?: string) => {
   return useQuery({
-    queryKey: ['reports', type, limit, offset],
+    queryKey: ['reports', type, limit, offset, search || ''],
     queryFn: async () => {
       const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error('Request timeout')), 15000)
@@ -104,6 +104,11 @@ export const useReports = (type?: 'daily' | 'weekly', limit?: number, offset?: n
         
         if (type) {
           query = query.eq('type', type);
+        }
+
+        const term = search?.trim().replace(/[%,()*]/g, ' ');
+        if (term) {
+          query = query.or(`title.ilike.%${term}%,content.ilike.%${term}%`);
         }
         
         if (limit) {
