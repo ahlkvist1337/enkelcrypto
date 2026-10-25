@@ -479,17 +479,7 @@ serve(async (req) => {
     // Log completion
     await logScrapeAttempt(supabase, 'completed', topArticles.length, savedCount);
     
-    // Clean up old news (keep last 30 days)
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    const { error: deleteError } = await supabase
-      .from('news')
-      .delete()
-      .lt('date', thirtyDaysAgo.toISOString().split('T')[0]);
-    
-    if (deleteError) {
-      console.error('Error cleaning old news:', deleteError);
-    }
+    // News articles are kept permanently (needed for SEO / Google ranking)
     
     // Clean up old logs (keep last 14 days)
     const fourteenDaysAgo = new Date();
