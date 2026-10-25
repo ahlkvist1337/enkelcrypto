@@ -56,9 +56,9 @@ export const DailyReport = ({ report, isLoading }: DailyReportProps) => {
             <span className="text-sm text-muted-foreground">{today}</span>
           </div>
           
-          <h1 className="text-3xl md:text-4xl font-bold text-foreground">
+          <h2 className="text-3xl md:text-4xl font-bold text-foreground">
             Dagens Kryptorapport
-          </h1>
+          </h2>
           
           <p className="text-lg text-muted-foreground leading-relaxed">
             Ingen rapport tillgänglig för idag. Rapporten genereras automatiskt varje dag.
@@ -83,9 +83,9 @@ export const DailyReport = ({ report, isLoading }: DailyReportProps) => {
           <ShareButtons title={report.title} url={`https://enkelcrypto.se/rapport/daily/${report.date}`} />
         </div>
         
-        <h1 className="text-3xl md:text-4xl font-bold text-foreground">
+        <h2 className="text-3xl md:text-4xl font-bold text-foreground">
           {report.title}
-        </h1>
+        </h2>
 
         <div className="prose prose-slate max-w-none">
           <div 
